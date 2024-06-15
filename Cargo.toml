@@ -1,0 +1,13 @@
+[package]
+name = "TermOpenerShim"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cacao = "0.3.2"
+home = "0.5.9"
+log = "0.4.21"
+serde = "1.0.203"
+serde_json5 = "0.1.0"
+simple-logging = "2.0.2"
+url = "2.5.1"

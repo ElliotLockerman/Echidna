@@ -1,0 +1,4 @@
+{
+    command: "nvim --",
+    group_open_by: "All", // Options: "none", "all"; in the future "by_ext" too?
+}
