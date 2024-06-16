@@ -3,6 +3,7 @@ use echidna_helpers::config::Config;
 
 use std::path::{Path, PathBuf};
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 
 // TODO: It looks like you can't depend on a binary (yet, it looks like artifact dependencies are
 // in progress), so echidna-shim might not be available (which would produce a compiler error), or
@@ -75,10 +76,16 @@ const INFO_PLIST_TEMPLATE: &str = r#"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-fn write_shim_bin(mac_os: &Path) -> Result<(), String> {
-    fs::write(&mac_os, SHIM_BINARY).map_err(|e|
-        format!("Error writing binary to temporary directory {}: {e}", mac_os.display())
+#[cfg(target_os = "macos")]
+fn write_shim_bin(app_name: &String, mac_os: &Path) -> Result<(), String> {
+    let bin_path = mac_os.join(app_name);
+    fs::write(&bin_path, SHIM_BINARY).map_err(|e|
+        format!("Error writing binary to temporary directory '{}': {e}", mac_os.display())
     )?;
+
+    // rwx/rx/r, copied from a first-party Apple app
+    fs::set_permissions(&bin_path, fs::Permissions::from_mode(0o751)).map_err(|e|
+        format!("Unable to set executable bits on shim binary '{}': {e}", bin_path.display()))?;
 
     Ok(())
 }
@@ -93,7 +100,7 @@ fn write_info_plist(app_name: &str, contents: &Path) -> Result<(), String> {
     let plist_dir = contents.join("Info.plist");
 
     fs::write(&plist_dir, rendered).map_err(|e|
-        format!( "Error writing Info.plist to temporary directory {}: {e}", plist_dir.display())
+        format!( "Error writing Info.plist to temporary directory '{}': {e}", plist_dir.display())
     )?;
 
     Ok(())
@@ -107,7 +114,7 @@ fn write_config(config: &Config, resources: &Path) -> Result<(), String> {
     )?;
 
     fs::write(&config_dir, config_json).map_err(|e|
-        format!("Error writing config to temporary directory {}: {e}", config_dir.display())
+        format!("Error writing config to temporary directory '{}': {e}", config_dir.display())
     )?;
 
     Ok(())
@@ -143,7 +150,7 @@ pub fn generate_shim_app(
                     }
                 }
             };
-            format!("Error creating directory {} in temp dir {}: {e}", relative.display(), prefix.display())
+            format!("Error creating directory '{}' in temp dir {}: {e}", relative.display(), prefix.display())
         })
     };
 
@@ -158,7 +165,7 @@ pub fn generate_shim_app(
     pretty_create_dir(&resources)?;
 
     write_info_plist(&app_name, &contents)?;
-    write_shim_bin(&mac_os)?;
+    write_shim_bin(&app_name, &mac_os)?;
     write_config(config, &resources)?;
 
     let app_dst = out_dir.join(&app_dir_name);
