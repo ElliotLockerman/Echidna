@@ -1,26 +1,10 @@
-[package]
-name = "echidna"
-version = "0.1.0"
-edition = "2021"
 
-[[bin]]
-name = "echidna"
+[workspace]
 
-[[bin]]
-name = "echidna_cli"
+members = [
+    "echidna-cli",
+    "echidna-helpers",
+    "echidna-lib",
+    "echidna-shim",
+]
 
-[[bin]]
-name = "echidna_shim"
-
-[lib]
-name = "echidna_lib"
-
-[dependencies]
-cacao = "0.3.2"
-clap = { version = "4.5.7", features = ["derive"] }
-home = "0.5.9"
-log = "0.4.21"
-serde = "1.0.203"
-serde_json5 = "0.1.0"
-simple-logging = "2.0.2"
-url = "2.5.1"

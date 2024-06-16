@@ -28,7 +28,7 @@ else
 fi
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-cd "${SCRIPT_DIR}/.."
+SHIM_DIR="${SCRIPT_DIR}/.."
 
 if [[ $CARGO_BUILD_FLAG = "" ]]; then
     # Cargo doesn't like empty arguments
@@ -38,7 +38,8 @@ else
 fi
 
 
-APP_DIR="target/${BUILD_KIND}/TestEchidnaShim.app"
+TARGET_DIR="${SHIM_DIR}/../target"
+APP_DIR="${TARGET_DIR}/${BUILD_KIND}/TestEchidnaShim.app"
 
 rm -r "${APP_DIR}" &>/dev/null || true # Neccesary for MacOS to pick up changes to Info.plist
 mkdir "${APP_DIR}"
@@ -46,7 +47,7 @@ mkdir "${APP_DIR}/Contents"
 mkdir "${APP_DIR}/Contents/MacOS"
 mkdir "${APP_DIR}/Contents/Resources"
 
-cp "target/${BUILD_KIND}/echidna_shim" "${APP_DIR}/Contents/MacOS/TestEchidnaShim"
-cp "app_files/test_Info.plist" "${APP_DIR}/Contents/Info.plist"
-cp "app_files/test_config.json5" "${APP_DIR}/Contents/Resources/config.json5"
+cp "${TARGET_DIR}/${BUILD_KIND}/echidna-shim" "${APP_DIR}/Contents/MacOS/TestEchidnaShim"
+cp "${SHIM_DIR}/app_files/test_Info.plist" "${APP_DIR}/Contents/Info.plist"
+cp "${SHIM_DIR}/app_files/test_config.json5" "${APP_DIR}/Contents/Resources/config.json5"
 
