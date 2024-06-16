@@ -14,11 +14,11 @@ use log::{error, info};
 use std::env::VarError;
 
 fn init_log() {
-    const LEVEL_KEY: &str = "TERM_OPEN_LOG_LEVEL";
-    const LEVEL_PATH: &str = "TERM_OPEN_LOG_PATH";
+    const LEVEL_KEY: &str = "ECH_SHIM_LOG_LEVEL";
+    const LEVEL_PATH: &str = "ECH_SHIM_LOG_PATH";
 
     // Default filename if path given is a directory, default directory is $HOME, or no $HOME, /
-    const DEFAULT_FILE: &str = "tog_log.txt";
+    const DEFAULT_FILE: &str = "ech_shim_log.txt";
 
     let mut path = match std::env::var(LEVEL_PATH) {
         Ok(x) => PathBuf::from(x),
@@ -46,9 +46,6 @@ fn init_log() {
             Err(format!("Non-unicode {LEVEL_KEY} value: {}", x.to_string_lossy()))
         }
     };
-
-    println!("path: {}", path.display());
-    println!("level: {:?}", level);
 
     match level {
         Ok(Some(lev)) => { 
@@ -85,17 +82,17 @@ macro_rules! os_cat {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct TermOpenerDelegate {
+struct EchidnaShimDelegate {
     config: Config,
 }
 
-impl TermOpenerDelegate {
+impl EchidnaShimDelegate {
     fn new(config: Config) -> Self {
         Self{config}
     }
 }
 
-impl AppDelegate for TermOpenerDelegate {
+impl AppDelegate for EchidnaShimDelegate {
 
     fn open_urls(&self, urls: Vec<Url>) {
         info!("Got urls {urls:?}");
@@ -140,33 +137,6 @@ impl AppDelegate for TermOpenerDelegate {
                 }
             }
         }
-
-
-        /*
-        let entries = self.config.get_handlers_for_urls(urls);
-        for (handler, paths) in entries.iter() {
-            let mut cmd = OsString::new();
-
-            // CD to the first of the group, arbitrarily (we can't do much better
-            // than arbitrary).
-            if let Some(parent) = paths[0].parent() {
-                cmd = os_cat!("cd ", "'", parent, "'; ");
-            }
-
-            if handler.group {
-                cmd = os_cat!(cmd, &handler.cmd);
-                for path in paths {
-                    cmd = os_cat!(cmd, " '", path, "'");
-                }
-                run_script_or_modal(cmd);
-            } else {
-                for path in paths {
-                    let cmd2 = os_cat!(cmd.clone(), &handler.cmd, " '", path, "'");
-                    run_script_or_modal(cmd2);
-                }
-            }
-        }
-        */
 
         // In Swift I would quit by getting a reference to the shared NSApplication,
         // but I don't see a way to do it with cacao. This doesn't seem to do
@@ -223,7 +193,7 @@ fn main() -> Result<(), String> {
         },
     };
 
-    App::new("com.lockerman.TermOpener", TermOpenerDelegate::new(config)).run();
+    App::new("com.lockerman.EchidnaShim", EchidnaShimDelegate::new(config)).run();
 
     Ok(())
 }

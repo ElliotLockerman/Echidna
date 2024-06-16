@@ -5,6 +5,9 @@
 
 set -eu -o pipefail
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+cd "${SCRIPT_DIR}/.."
+
 cargo clean
-rm -r "TermOpenShim.app" || true
+rm -r "TestEchidnaShim.app" || true
 

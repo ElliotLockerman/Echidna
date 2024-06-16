@@ -3,19 +3,6 @@
 version = 3
 
 [[package]]
-name = "TermOpenerShim"
-version = "0.1.0"
-dependencies = [
- "cacao",
- "home",
- "log",
- "serde",
- "serde_json5",
- "simple-logging",
- "url",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -144,6 +131,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "echidna"
+version = "0.1.0"
+dependencies = [
+ "cacao",
+ "home",
+ "log",
+ "serde",
+ "serde_json5",
+ "simple-logging",
+ "url",
 ]
 
 [[package]]
