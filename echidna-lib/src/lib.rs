@@ -35,6 +35,23 @@ const INFO_PLIST_TEMPLATE: &str = r#"
         </dict>
     </array>
 
+    {{#if exts}}
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+            {{#each exts}}
+                <string>{{this}}</string>
+            {{/each}}
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+        </dict>
+    </array>
+    {{/if}}
+
+
     <key>CFBundleExecutable</key>
     <string>{{app_display_name}}</string>
 
@@ -90,11 +107,23 @@ fn write_shim_bin(app_name: &String, mac_os: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn write_info_plist(app_name: &str, contents: &Path) -> Result<(), String> {
+fn parse_exts(exts: &str) -> Vec<String> {
+    exts.split(',')
+        .map(|x| x.trim().trim_start_matches('.').to_owned())
+        .filter(|x| !x.is_empty())
+        .collect::<Vec<_>>()
+}
+
+fn write_info_plist(app_name: &str, exts: &str, contents: &Path) -> Result<(), String> {
+    let extsv = parse_exts(exts);
+
     let reg = handlebars::Handlebars::new();
     let rendered = reg.render_template(
         INFO_PLIST_TEMPLATE,
-        &serde_json::json!({"app_display_name": app_name}),
+        &serde_json::json!({
+            "app_display_name": app_name,
+            "exts": extsv
+        }),
     ).map_err(|e| format!("Error rendering Info.plist template: {e}"))?;
 
     let plist_dir = contents.join("Info.plist");
@@ -122,9 +151,11 @@ fn write_config(config: &Config, resources: &Path) -> Result<(), String> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// exts is a comma-delimited list of extensions to support
 pub fn generate_shim_app(
     app_name: String,
     config: &Config,
+    exts: String,
     out_dir: String
 ) -> Result<(), String> {
 
@@ -164,7 +195,7 @@ pub fn generate_shim_app(
     pretty_create_dir(&mac_os)?;
     pretty_create_dir(&resources)?;
 
-    write_info_plist(&app_name, &contents)?;
+    write_info_plist(&app_name, &exts, &contents)?;
     write_shim_bin(&app_name, &mac_os)?;
     write_config(config, &resources)?;
 

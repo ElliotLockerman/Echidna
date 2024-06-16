@@ -9,6 +9,9 @@ struct Args {
 
     command: String,
 
+    #[arg(long, default_value_t = String::from(""))]
+    exts: String,
+
     #[arg(long, default_value_t = Default::default())]
     group_open_by: GroupBy,
 
@@ -24,6 +27,7 @@ fn main() -> Result<(), String> {
     echidna_lib::generate_shim_app(
         args.app_name,
         &config,
+        args.exts,
         args.out_dir
     )
 }
