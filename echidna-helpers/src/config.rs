@@ -1,10 +1,10 @@
 
 use std::path::PathBuf;
 
-use log::error;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
+use clap::ValueEnum;
 
-#[derive(Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ValueEnum)]
 pub enum GroupBy {
     None,
     All,
@@ -16,7 +16,17 @@ impl Default for GroupBy {
     }
 }
 
-#[derive(Deserialize, Debug)]
+impl std::string::ToString for GroupBy {
+    fn to_string(&self) -> String {
+        // For use by clap, lower case since actual cli arguments would be lower case
+        match self {
+            GroupBy::None => "none".to_owned(),
+            GroupBy::All => "all".to_owned(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub command: String,
     pub group_open_by: GroupBy,
@@ -27,12 +37,15 @@ fn ts<E: ToString>(e: E) -> String {
 }
 
 impl Config {
+    pub fn new(command: String, group_open_by: GroupBy) -> Config {
+        Config{command, group_open_by}
+    }
+
     pub fn load() -> Result<Config, String> {
         let bin_path = match std::env::args().next() {
             Some(x) => x,
             None => {
-                error!("Couldn't get binary path");
-                std::process::exit(1);
+                return Err("Couldn't get binary path".to_owned());
             },
         };
 

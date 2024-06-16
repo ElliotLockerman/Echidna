@@ -8,3 +8,4 @@ serde = "1.0.203"
 serde_json5 = "0.1.0"
 log = "0.4.21"
 simple-logging = "2.0.2"
+clap = { version = "4.5.7", features = ["derive"] }
