@@ -1,0 +1,10 @@
+[package]
+name = "echidna-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+echidna-lib = { path = "../echidna-lib" }
+echidna-helpers = { path = "../echidna-helpers" }
+eframe = {version = "0.27.2", features = ["persistence"]}
+rfd = "0.14.1"

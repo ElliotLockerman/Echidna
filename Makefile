@@ -10,9 +10,10 @@ MODE = release
 E_SHIM = target/$(MODE)/echidna-shim
 E_LIB = target/$(MODE)/echidna-lib
 E_CLI = target/$(MODE)/echidna-cli
+E_APP = target/$(MODE)/echidna-app
 # echidna-helpers should be find as a regular cargo dep
 
-all: $(E_CLI)
+all: $(E_CLI) $(E_APP)
 
 $(E_SHIM):
 	cargo build --release --bin echidna-shim
@@ -22,6 +23,9 @@ $(E_LIB): $(E_SHIM)
 
 $(E_CLI): $(E_LIB)
 	cargo build --release --bin echidna-cli
+
+$(E_APP): $(E_LIB)
+	cargo build --release --bin echidna-app
 
 .PHONY: all clean
 clean:

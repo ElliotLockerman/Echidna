@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use clap::ValueEnum;
 
-#[derive(Serialize, Deserialize, Debug, Clone, ValueEnum)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum GroupBy {
     None,
     All,

@@ -1,6 +1,8 @@
 
 use echidna_helpers::config::{Config, GroupBy};
 
+use std::path::PathBuf;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -28,7 +30,7 @@ fn main() -> Result<(), String> {
         args.app_name,
         &config,
         args.exts,
-        args.out_dir
+        PathBuf::from(args.out_dir)
     )
 }
 

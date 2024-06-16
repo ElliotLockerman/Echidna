@@ -156,12 +156,11 @@ pub fn generate_shim_app(
     app_name: String,
     config: &Config,
     exts: String,
-    out_dir: String
+    out_dir: PathBuf
 ) -> Result<(), String> {
 
     let app_dir_name = app_name.clone() + ".app";
 
-    let out_dir = PathBuf::from(out_dir);
     if !out_dir.exists() {
         return Err(format!("Output directory '{}' doesn't exist", out_dir.display()));
     }
@@ -200,6 +199,9 @@ pub fn generate_shim_app(
     write_config(config, &resources)?;
 
     let app_dst = out_dir.join(&app_dir_name);
+    if app_dst.exists() {
+        return Err(format!("'{}' already exists", app_dst.display()));
+    }
     fs::rename(&app_root, &app_dst).map_err(|e|
         format!(
             "Error moving temporary app '{}' to out_dir '{}': {e}",
