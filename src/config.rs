@@ -17,24 +17,9 @@ impl Default for GroupBy {
 }
 
 #[derive(Deserialize, Debug)]
-struct RawConfig {
-    command: String,
-    group_open_by: Option<GroupBy>, // default: All
-}
-
-#[derive(Debug)]
 pub struct Config {
     pub command: String,
     pub group_open_by: GroupBy,
-}
-
-impl Config {
-    fn from_raw(raw: &RawConfig) -> Self {
-        Config {
-            command: raw.command.clone(),
-            group_open_by: raw.group_open_by.clone().unwrap_or_default(),
-        }
-    }
 }
 
 fn ts<E: ToString>(e: E) -> String {
@@ -58,8 +43,7 @@ impl Config {
 
         let conf_str = std::fs::read_to_string(config_path).map_err(ts)?;
 
-        let raw_conf: RawConfig = serde_json5::from_str(&conf_str).map_err(ts)?;
-        let conf = Config::from_raw(&raw_conf);
+        let conf: Config = serde_json5::from_str(&conf_str).map_err(ts)?;
         if conf.command.is_empty() {
             return Err("Config's 'command' field may not be empty".to_owned());
         }
