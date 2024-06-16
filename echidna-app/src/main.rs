@@ -54,13 +54,13 @@ impl eframe::App for EchidnaApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new(0).num_columns(2).show(ui, |ui| {
                 ui.label("Command:");
-                let cmd = egui::TextEdit::singleline(&mut self.cmd).code_editor();
+                let cmd = egui::TextEdit::singleline(&mut self.cmd);
                 ui.add(cmd);
                 ui.end_row();
 
                 ui.label("Extensions:");
                 let exts = egui::TextEdit::singleline(&mut self.exts)
-                    .hint_text("Comma-delimited; only affects 'Open With' menu");
+                    .hint_text("Optional; see Readme");
                 ui.add(exts);
                 ui.end_row();
 
