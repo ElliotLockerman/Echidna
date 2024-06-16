@@ -46,7 +46,7 @@ mkdir "${APP_DIR}/Contents"
 mkdir "${APP_DIR}/Contents/MacOS"
 mkdir "${APP_DIR}/Contents/Resources"
 
-cp "target/${BUILD_KIND}/echidna" "${APP_DIR}/Contents/MacOS/TestEchidnaShim"
+cp "target/${BUILD_KIND}/echidna_shim" "${APP_DIR}/Contents/MacOS/TestEchidnaShim"
 cp "app_files/test_Info.plist" "${APP_DIR}/Contents/Info.plist"
 cp "app_files/test_config.json5" "${APP_DIR}/Contents/Resources/config.json5"
 

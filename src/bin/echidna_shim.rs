@@ -1,6 +1,5 @@
 
-mod config;
-use config::{Config, GroupBy};
+use echidna_lib::config::{Config, GroupBy};
 
 use std::process::Command;
 use std::ffi::{OsStr, OsString};
