@@ -1,9 +1,8 @@
-
 [workspace]
 
 members = [
     "echidna-cli",
-    "echidna-helpers",
+    "echidna-util",
     "echidna-lib",
     "echidna-shim",
     "echidna",

@@ -24,7 +24,7 @@ E_LIB = target/$(MODE_DIR)/echidna_lib.rlib
 E_CLI = target/$(MODE_DIR)/echidna-cli
 E_APP = target/$(MODE_DIR)/echidna
 E_APP_BUNDLE = target/$(MODE_DIR)/Echidna.app
-# echidna-helpers should be fine as a regular cargo dep
+# echidna-util should be fine as a regular cargo dep
 
 
 all: $(E_CLI) $(E_APP_BUNDLE)

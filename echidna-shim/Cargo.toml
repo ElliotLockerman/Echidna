@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-echidna-helpers = { path = "../echidna-helpers" }
+echidna-util = { path = "../echidna-util" }
 cacao = "0.3.2"
 home = "0.5.9"
 log = "0.4.21"

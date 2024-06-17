@@ -5,7 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-echidna-helpers = { path = "../echidna-helpers" }
+echidna-util = { path = "../echidna-util" }
 echidna-shim = { path = "../echidna-shim" }
 handlebars = "5.1.2"
 serde_json = "1.0.117"

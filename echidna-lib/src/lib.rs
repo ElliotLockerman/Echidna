@@ -1,5 +1,5 @@
 
-use echidna_helpers::config::Config;
+use echidna_util::config::Config;
 
 use std::path::{Path, PathBuf};
 use std::fs;

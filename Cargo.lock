@@ -270,7 +270,7 @@ dependencies = [
  "serde",
  "serde_repr",
  "url",
- "zbus 4.2.2",
+ "zbus 4.3.0",
 ]
 
 [[package]]
@@ -1124,8 +1124,8 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 name = "echidna"
 version = "0.1.0"
 dependencies = [
- "echidna-helpers",
  "echidna-lib",
+ "echidna-util",
  "eframe",
  "rfd",
 ]
@@ -1135,27 +1135,16 @@ name = "echidna-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
- "echidna-helpers",
  "echidna-lib",
-]
-
-[[package]]
-name = "echidna-helpers"
-version = "0.1.0"
-dependencies = [
- "clap",
- "log",
- "serde",
- "serde_json5",
- "simple-logging",
+ "echidna-util",
 ]
 
 [[package]]
 name = "echidna-lib"
 version = "0.1.0"
 dependencies = [
- "echidna-helpers",
  "echidna-shim",
+ "echidna-util",
  "handlebars",
  "serde_json",
  "tempdir",
@@ -1166,11 +1155,22 @@ name = "echidna-shim"
 version = "0.1.0"
 dependencies = [
  "cacao",
- "echidna-helpers",
+ "echidna-util",
  "home",
  "log",
  "simple-logging",
  "url",
+]
+
+[[package]]
+name = "echidna-util"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "log",
+ "serde",
+ "serde_json5",
+ "simple-logging",
 ]
 
 [[package]]
@@ -4441,9 +4441,9 @@ dependencies = [
 
 [[package]]
 name = "zbus"
-version = "4.2.2"
+version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "989c3977a7aafa97b12b9a35d21cdcff9b0d2289762b14683f45d66b1ba6c48f"
+checksum = "23915fcb26e7a9a9dc05fd93a9870d336d6d032cd7e8cebf1c5c37666489fdd5"
 dependencies = [
  "async-broadcast 0.7.1",
  "async-executor",
@@ -4472,7 +4472,7 @@ dependencies = [
  "uds_windows",
  "windows-sys 0.52.0",
  "xdg-home",
- "zbus_macros 4.2.2",
+ "zbus_macros 4.3.0",
  "zbus_names 3.0.0",
  "zvariant 4.1.1",
 ]
@@ -4493,9 +4493,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_macros"
-version = "4.2.2"
+version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fe9de53245dcf426b7be226a4217dd5e339080e5d46e64a02d6e5dcbf90fca1"
+checksum = "02bcca0b586d2f8589da32347b4784ba424c4891ed86aa5b50d5e88f6b2c4f5d"
 dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",

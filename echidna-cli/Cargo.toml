@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.7", features = ["derive"] }
-echidna-helpers = { path = "../echidna-helpers" }
+echidna-util = { path = "../echidna-util" }
 echidna-lib = { path = "../echidna-lib" }
