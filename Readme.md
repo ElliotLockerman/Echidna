@@ -19,7 +19,7 @@ Then click `Generate!`, provide a file name and directory, and click `Save`. You
 
 ## Building
 
-Build with `make`, not `cargo build` or `cargo run` (due to dependency issues; see `echidna-lib` under Repo Structure, below). `Echidna.app` will be generated in `target/release/Echidna.app`
+Build with `make [mode=debug | mode=release]`, not `cargo build` or `cargo run` (due to dependency issues; see `echidna-lib` under Repo Structure, below). `Echidna.app` will be generated in `target/release/Echidna.app`
 
 ## Repo Structure
 
