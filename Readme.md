@@ -5,12 +5,6 @@
 
 Echidna is a Mac app for generating shim applications that allow opening files with terminal programs by double clicking on them. For example, you could generate a shim to open double-clicked source files in `(n)vim` or `emacs`. Files can also be opened with the selected terminal application by dragging to the shim's icon in the Finder or Dock or selecting the shim from the `Open With` menu after right-clicking on the file icon. Echidna's name, like its functionality, is inspired by [Platypus](https://sveinbjorn.org/platypus), a wonderful Mac app for wrapping scripts in GUIs.
 
-
-## Building
-
-Build with `make`, not `cargo build` or `cargo run` (This is to bypass cargo's lack of binary dependencies). `Echidna.app` will be generated in `target/release/Echidna.app`
-
-
 ## Usage
 
 ![Screenshot](media/screenshot_0.png)
@@ -22,4 +16,16 @@ After launching Echidna, first fill out the fields:
 - **Open Files: () Together, () Individually**: if multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
 
 Then click `Generate!`, provide a file name and directory, and click `Save`. You can then set your shim as the `Open With` handler, or launch it to provide a draggable target in the dock bar (no windows will appear after being launched, and launching isn't necessary for other use pattern).
+
+## Building
+
+Build with `make`, not `cargo build` or `cargo run` (due to dependency issues; see `echidna-lib` under Repo Structure, below). `Echidna.app` will be generated in `target/release/Echidna.app`
+
+## Repo Structure
+
+- `echidna-helpers`: `lib`. Small pieces of functionality that have no dependencies within Echidna.
+- `echidna-shim`: `bin`. The binary that runs within the generated shim app, receiving the double-clicked files and launching the terminal session.
+- `echidna-lib`: `lib`. The library with the core `Echidna.app` functionality of generating specialized shim apps. Depends on `echidna-helpers` (as a library in the traditional manner), and `bin` (compiled in as a `CONST` variable). This dependency on a binary is why `make` is used rather than `cargo build`: `cargo` does not (yet) support binary dependencies, so if `echidna-shim` is not manually rebuilt before each `echidna-lib` build, an out-of-date `echidna-shim` might be used.
+- `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`.
+- `echidna-app`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
 
