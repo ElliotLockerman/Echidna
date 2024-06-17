@@ -38,6 +38,6 @@ mkdir "${APP_DIR}/Contents"
 mkdir "${APP_DIR}/Contents/MacOS"
 mkdir "${APP_DIR}/Contents/Resources"
 
-cp "${TARGET_DIR}/echidna-app" "${APP_DIR}/Contents/MacOS/Echidna"
+cp "${TARGET_DIR}/echidna" "${APP_DIR}/Contents/MacOS/Echidna"
 cp "${SRC_DIR}/app_files/Info.plist" "${APP_DIR}/Contents/Info.plist"
 

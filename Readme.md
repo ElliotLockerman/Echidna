@@ -27,5 +27,5 @@ Build with `make`, not `cargo build` or `cargo run` (due to dependency issues; s
 - `echidna-shim`: `bin`. The binary that runs within the generated shim app, receiving the double-clicked files and launching the terminal session.
 - `echidna-lib`: `lib`. The library with the core `Echidna.app` functionality of generating specialized shim apps. Depends on `echidna-helpers` (as a library in the traditional manner), and `bin` (compiled in as a `CONST` variable). This dependency on a binary is why `make` is used rather than `cargo build`: `cargo` does not (yet) support binary dependencies, so if `echidna-shim` is not manually rebuilt before each `echidna-lib` build, an out-of-date `echidna-shim` might be used.
 - `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`.
-- `echidna-app`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
+- `echidna`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
 
