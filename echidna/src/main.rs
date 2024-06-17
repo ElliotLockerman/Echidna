@@ -1,4 +1,5 @@
 
+use echidna_util::get_app_resources;
 use echidna_util::config::{Config, GroupBy};
 
 use std::path::PathBuf;
@@ -37,11 +38,13 @@ impl EchidnaApp {
         path.pop();
 
         let config = Config::new(self.cmd.clone(), self.group_by);
+        let shim_path = get_app_resources()?.join("echidna-shim");
 
         echidna_lib::generate_shim_app(
             file_name,
             &config,
             self.exts.clone(),
+            &shim_path,
             path.to_owned(),
         )?;
 

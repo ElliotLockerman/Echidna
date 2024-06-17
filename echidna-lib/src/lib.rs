@@ -3,12 +3,7 @@ use echidna_util::config::Config;
 
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 
-// TODO: It looks like you can't depend on a binary (yet, it looks like artifact dependencies are
-// in progress), so echidna-shim might not be available (which would produce a compiler error), or
-// might be out of date (which is much more worrying). Always use the Makefile, not cargo to build.
-const SHIM_BINARY: &[u8] = include_bytes!(concat!("../../target/", env!("BUILD_MODE"), "/echidna-shim"));
 
 const INFO_PLIST_TEMPLATE: &str = r#"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -94,15 +89,11 @@ const INFO_PLIST_TEMPLATE: &str = r#"
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(target_os = "macos")]
-fn write_shim_bin(app_name: &String, mac_os: &Path) -> Result<(), String> {
+fn write_shim_bin(app_name: &String, mac_os: &Path, shim_bin: &Path) -> Result<(), String> {
     let bin_path = mac_os.join(app_name);
-    fs::write(&bin_path, SHIM_BINARY).map_err(|e|
-        format!("Error writing binary to temporary directory '{}': {e}", mac_os.display())
+    fs::copy(shim_bin, &bin_path).map_err(|e|
+        format!("Error copying binary to temporary directory '{}': {e}", mac_os.display())
     )?;
-
-    // rwx/rx/r, copied from a first-party Apple app
-    fs::set_permissions(&bin_path, fs::Permissions::from_mode(0o751)).map_err(|e|
-        format!("Unable to set executable bits on shim binary '{}': {e}", bin_path.display()))?;
 
     Ok(())
 }
@@ -156,6 +147,7 @@ pub fn generate_shim_app(
     app_name: String,
     config: &Config,
     exts: String,
+    shim_bin: &Path,
     out_dir: PathBuf
 ) -> Result<(), String> {
 
@@ -195,7 +187,7 @@ pub fn generate_shim_app(
     pretty_create_dir(&resources)?;
 
     write_info_plist(&app_name, &exts, &contents)?;
-    write_shim_bin(&app_name, &mac_os)?;
+    write_shim_bin(&app_name, &mac_os, shim_bin)?;
     write_config(config, &resources)?;
 
     let app_dst = out_dir.join(&app_dir_name);

@@ -10,6 +10,7 @@ USAGE="build-test-shim.sh [--debug | --release]"
 if [[ $# -gt 1 ]]; then
     echo "Too many arguments" >&2
     echo "${USAGE}"
+    exit 1
 fi
 
 BUILD_KIND=""

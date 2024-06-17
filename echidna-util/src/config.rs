@@ -1,6 +1,4 @@
 
-use std::path::PathBuf;
-
 use serde::{Serialize, Deserialize};
 use clap::ValueEnum;
 
@@ -42,19 +40,10 @@ impl Config {
     }
 
     pub fn load() -> Result<Config, String> {
-        let bin_path = match std::env::args().next() {
-            Some(x) => x,
-            None => {
-                return Err("Couldn't get binary path".to_owned());
-            },
-        };
+        let mut path = crate::get_app_resources()?;
+        path.push("config.json5");
 
-        let mut config_path = PathBuf::from(bin_path);
-        config_path.pop(); // Binary itself
-        config_path.pop(); // MacOS/
-        config_path.push("Resources/config.json5");
-
-        let conf_str = std::fs::read_to_string(config_path).map_err(ts)?;
+        let conf_str = std::fs::read_to_string(path).map_err(ts)?;
 
         let conf: Config = serde_json5::from_str(&conf_str).map_err(ts)?;
         if conf.command.is_empty() {

@@ -7,6 +7,8 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct Args {
+    shim_path: String,
+
     app_name: String,
 
     command: String,
@@ -30,6 +32,7 @@ fn main() -> Result<(), String> {
         args.app_name,
         &config,
         args.exts,
+        &PathBuf::from(args.shim_path),
         PathBuf::from(args.out_dir)
     )
 }
