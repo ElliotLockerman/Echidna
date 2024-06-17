@@ -5,14 +5,8 @@ use std::path::PathBuf;
 
 // Get the path to the currently executing app bundle's Resources directory.
 pub fn get_app_resources() -> Result<PathBuf, String> {
-    let bin_path = match std::env::args().next() {
-        Some(x) => x,
-        None => {
-            return Err("Couldn't get binary path".to_owned());
-        },
-    };
-
-    let mut path = PathBuf::from(bin_path);
+    let mut path = std::env::current_exe()
+        .map_err(|e| format!("Failed to get current ext: {e}"))?;
 
     // Binary itself
     if !path.pop() {

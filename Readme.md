@@ -12,7 +12,7 @@ Echidna is a Mac app for generating "shim applications" that allow opening files
 
 After launching Echidna, first fill out the fields:
 
-- **Command**: The command-line program to execute. The paths of the double-clicked files will be appended to this, so if your terminal application supports `--` to separate positional arguments from flags, it's recommended (e.g., if you want to open your files with `nvim`, type `nvim --` as the command, so a file named `-example.txt` opened rather than putting `nvim` in to `ex` mode).
+- **Command**: The terminal program to execute. The paths of the double-clicked files will be appended to this, so if your terminal application supports `--` to separate positional arguments from flags, it's recommended (e.g., if you want to open your files with `nvim`, type `nvim --` as the command, so a file named `-example.txt` opened rather than putting `nvim` in to `ex` mode).
 - **Extensions**: Optionally add extensions for the shim app to support. Adding extensions makes your shim app appear in the `Open With` menu for files with supported extensions, but will prevent files with other extensions from being dragged to your shim app. Files with other extensions can still be opened by double-clicking if your shim app is selected in the `Open With` -> `Other...` dialog (You may have to select `All Applications` in the `Enable` drop-down)
 - **Open Files: () Together, () Individually**: If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
 
@@ -24,12 +24,12 @@ Then click `Generate!`, provide a file name and directory, and click `Save`. You
 - `echidna-util`: `lib`. Small pieces of functionality that have no dependencies within Echidna.
 - `echidna-shim`: `bin`. The binary that runs within the generated shim app, receiving the double-clicked files and launching the terminal session.
 - `echidna-lib`: `lib`. The library with the core Echidna functionality of generating specialized shim apps. Depends on `echidna-util` (as a library in the traditional manner), and `bin` (compiled in as a `CONST` variable). This dependency on a binary is why `make` is used rather than `cargo build`: `cargo` does not (yet) support binary dependencies, so if `echidna-shim` is not manually rebuilt before each `echidna-lib` build, an out-of-date `echidna-shim` might be used.
-- `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`.
+- `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`. By default, `echidna-cli` looks for an `echidna-shim` binary in the same directory, but this can be overwritten with a command-line flag. `echidna-cli` _should not_ be run with `cargo run`, as Cargo is not aware of the dependency between `echidna-cli` and `echidna-shim`, and a stale version of `echidna-shim` may be used.
 - `echidna`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
 
 
 ## Building
 
-**TLDR: Run `./build-app.sh [--debug | --release]`**
+**TLDR: Run `./build.sh [--debug | --release]`**
 
-`cargo build` builds all of the binaries, but to build the `Echidna.app` Mac app bundle, you have to run `./echidna/scripts/make-app.sh`. `./build-app.sh` just runs `cargo build` then `make-app.sh`. `Echidna.app` will be built in `target/{BUILD_MODE}/Echidna.sh`.
+`cargo build` builds the Rust binaries, but to run `echidna-cli` and build the `Echidna.app` Mac app bundle, you have to run `cargo build --workspace` and `./echidna/scripts/make-app.sh` (which is what `./build.sh` does). `--workspace` is required because `echidna-cli` and `Echidna.app` have a runtime dependency on `echidna-shim`, but Cargo doesn't currently doesn't support this kind of dependency, so running `cargo build` may result in a stale version of `echidna-shim` being used. `Echidna.app` will be built in `target/{BUILD_MODE}/Echidna.app`.

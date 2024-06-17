@@ -4,7 +4,6 @@ use echidna_util::config::Config;
 use std::path::{Path, PathBuf};
 use std::fs;
 
-
 const INFO_PLIST_TEMPLATE: &str = r#"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -92,7 +91,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"
 fn write_shim_bin(app_name: &String, mac_os: &Path, shim_bin: &Path) -> Result<(), String> {
     let bin_path = mac_os.join(app_name);
     fs::copy(shim_bin, &bin_path).map_err(|e|
-        format!("Error copying binary to temporary directory '{}': {e}", mac_os.display())
+        format!("Error copying shim binary '{}' to temporary directory '{}': {e}", shim_bin.display(), mac_os.display())
     )?;
 
     Ok(())
@@ -120,7 +119,7 @@ fn write_info_plist(app_name: &str, exts: &str, contents: &Path) -> Result<(), S
     let plist_dir = contents.join("Info.plist");
 
     fs::write(&plist_dir, rendered).map_err(|e|
-        format!( "Error writing Info.plist to temporary directory '{}': {e}", plist_dir.display())
+        format!("Error writing Info.plist to temporary directory '{}': {e}", plist_dir.display())
     )?;
 
     Ok(())
