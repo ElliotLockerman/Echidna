@@ -24,28 +24,15 @@ impl EchidnaApp {
         }
     }
     
-    fn generate(&self, mut path: PathBuf) -> Result<(), String> {
-
-        let file_name = match path.file_stem() {
-            Some(x) => x.to_owned(),
-            None => return Err("No file name given".to_owned()),
-        };
-        let file_name = match file_name.to_str() {
-            Some(x) => x.to_owned(),
-            None => return Err("File name must be valid unicode".to_string()),
-        };
-
-        path.pop();
-
+    fn generate(&self, app_path: PathBuf) -> Result<(), String> {
         let config = Config::new(self.cmd.clone(), self.group_by);
         let shim_path = get_app_resources()?.join("echidna-shim");
 
         echidna_lib::generate_shim_app(
-            file_name,
             &config,
             self.exts.clone(),
             &shim_path,
-            path.to_owned(),
+            app_path,
         )?;
 
         Ok(())

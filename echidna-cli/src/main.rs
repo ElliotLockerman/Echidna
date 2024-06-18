@@ -7,9 +7,9 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct Args {
-    app_name: String,
-
     command: String,
+
+    out_path: PathBuf,
 
     #[arg(long, default_value_t = String::from(""))]
     exts: String,
@@ -47,11 +47,10 @@ fn main() -> Result<(), String> {
     }
 
     echidna_lib::generate_shim_app(
-        args.app_name,
         &config,
         args.exts,
         &shim_path,
-        PathBuf::from(args.out_dir)
+        args.out_path
     )
 }
 

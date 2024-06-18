@@ -3,9 +3,9 @@ use echidna_util::config::Config;
 
 use std::path::{Path, PathBuf};
 use std::fs;
+use std::ffi::{OsStr, OsString};
 
-const INFO_PLIST_TEMPLATE: &str = r#"
-<?xml version="1.0" encoding="UTF-8"?>
+const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -88,7 +88,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(target_os = "macos")]
-fn write_shim_bin(app_name: &String, mac_os: &Path, shim_bin: &Path) -> Result<(), String> {
+fn write_shim_bin(app_name: &OsStr, mac_os: &Path, shim_bin: &Path) -> Result<(), String> {
     let bin_path = mac_os.join(app_name);
     fs::copy(shim_bin, &bin_path).map_err(|e|
         format!("Error copying shim binary '{}' to temporary directory '{}': {e}", shim_bin.display(), mac_os.display())
@@ -139,22 +139,45 @@ fn write_config(config: &Config, resources: &Path) -> Result<(), String> {
     Ok(())
 }
 
+// Returns (app_name, bundle_name); app_name is without .app, bundle_* has it
+fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), String> {
+    let app_name = || app_path.file_name()
+        .map(|x| x.to_owned())
+        .ok_or_else(|| format!("Couldn't get file name from {}", app_path.display()));
+
+    let app_name = match app_path.extension() {
+        Some(ext) =>
+            if ext == "app" {
+                app_path.file_stem()
+                    .ok_or_else(|| format!("Couldn't get app name from path '{}'", app_path.display()))?
+                    .to_owned()
+            } else {
+                app_name()?
+            }
+        None => app_name()?
+    };
+
+    let mut bundle_name = app_name.clone();
+    bundle_name.push(".app");
+
+    app_path.set_file_name(&bundle_name);
+
+    Ok((app_name, bundle_name, app_path))
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // exts is a comma-delimited list of extensions to support
 pub fn generate_shim_app(
-    app_name: String,
     config: &Config,
     exts: String,
     shim_bin: &Path,
-    out_dir: PathBuf
+    app_path: PathBuf,
 ) -> Result<(), String> {
 
-    let app_dir_name = app_name.clone() + ".app";
+    std::fs::write("/Users/EL/Desktop/log.txt", format!("out_path: {}\n", app_path.display())).unwrap();
 
-    if !out_dir.exists() {
-        return Err(format!("Output directory '{}' doesn't exist", out_dir.display()));
-    }
+    let (app_name, bundle_name, bundle_path) = get_names(app_path)?;
 
     let tmp_dir = tempdir::TempDir::new("echidna-lib")
         .map_err(|e| format!("Error creating temporary directory: {e}"))?;
@@ -175,7 +198,7 @@ pub fn generate_shim_app(
         })
     };
 
-    let app_root = tmp_dir.path().join(&app_dir_name);
+    let app_root = tmp_dir.path().join(&bundle_name);
     let contents = app_root.join("Contents");
     let mac_os = contents.join("MacOS");
     let resources = contents.join("Resources");
@@ -185,19 +208,18 @@ pub fn generate_shim_app(
     pretty_create_dir(&mac_os)?;
     pretty_create_dir(&resources)?;
 
-    write_info_plist(&app_name, &exts, &contents)?;
+    write_info_plist(&app_name.to_string_lossy(), &exts, &contents)?;
     write_shim_bin(&app_name, &mac_os, shim_bin)?;
     write_config(config, &resources)?;
 
-    let app_dst = out_dir.join(&app_dir_name);
-    if app_dst.exists() {
-        return Err(format!("'{}' already exists", app_dst.display()));
+    if bundle_path.exists() {
+        return Err(format!("'{}' already exists", bundle_path.display()));
     }
-    fs::rename(&app_root, &app_dst).map_err(|e|
+    fs::rename(&app_root, &bundle_path).map_err(|e|
         format!(
             "Error moving temporary app '{}' to out_dir '{}': {e}",
             app_root.display(),
-            app_dst.display(),
+            bundle_path.display(),
         )
     )?;
 
