@@ -230,8 +230,6 @@ pub fn generate_shim_app(
     overwrite: bool
 ) -> Result<(), GenErr> {
 
-    std::fs::write("/Users/EL/Desktop/log.txt", format!("out_path: {}\n", app_path.display())).unwrap();
-
     let (app_name, bundle_name, final_bundle_path) = get_names(app_path)?;
 
     let tmp_dir = tempdir::TempDir::new("echidna-lib")
