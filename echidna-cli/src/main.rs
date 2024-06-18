@@ -22,6 +22,9 @@ struct Args {
 
     #[arg(long)]
     shim_path: Option<String>,
+
+    #[arg(long, short, action)]
+    force: bool,
 }
 
 fn main() -> Result<(), String> {
@@ -50,7 +53,8 @@ fn main() -> Result<(), String> {
         &config,
         args.exts,
         &shim_path,
-        args.out_path
-    )
+        args.out_path.clone(),
+        args.force,
+    ).map_err(|e| e.to_msg(&args.out_path))
 }
 

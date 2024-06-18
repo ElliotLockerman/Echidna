@@ -1,8 +1,8 @@
 
 use echidna_util::get_app_resources;
 use echidna_util::config::{Config, GroupBy};
+use echidna_lib::{generate_shim_app, GenErr};
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::ffi::OsString;
 
@@ -28,19 +28,79 @@ impl EchidnaApp {
         }
     }
     
-    fn generate(&self, app_path: PathBuf) -> Result<(), String> {
-        let config = Config::new(self.cmd.clone(), self.group_by);
-        let shim_path = get_app_resources()?.join("echidna-shim");
+    fn generate(&mut self) {
+        let mut dialog = FileDialog::new();
+        if let Some(name) = &self.previous_name {
+            // Shame to have to use to_string_lossy(), everwhere else, the filename is
+            // an OsStr(ing). At least here the user has the chance  to fix it if it
+            // gets mangled.
+            dialog = dialog.set_file_name(name.to_string_lossy());
+        }
+        let Some(app_path) = dialog.save_file() else {
+            return;
+        };
+        self.previous_name = app_path.file_name().map(|x| x.to_owned());
 
-        echidna_lib::generate_shim_app(
+        let config = Config::new(self.cmd.clone(), self.group_by);
+        let shim_path = match get_app_resources() {
+            Ok(x) => x.join("echidna-shim"),
+            Err(e) => {
+                show_modal(e);
+                return;
+            }
+        };
+
+        let res = generate_shim_app(
             &config,
             self.exts.clone(),
             &shim_path,
-            app_path,
-        )?;
+            app_path.clone(),
+            false,
+        );
 
-        Ok(())
+        match res {
+            Ok(()) => return,
+            Err(err) => match err {
+                GenErr::Other(msg) => {
+                    show_modal(msg);
+                    return;
+                },
+
+                GenErr::AppAlreadyExists => (),
+            }
+        }
+
+        // Couldn't write app because one already exists. Give user a chance to ovewrite.
+        let result = rfd::MessageDialog::new()
+            .set_level(rfd::MessageLevel::Error)
+            .set_title("Error: Destination already exists")
+            .set_description(format!("Destination '{}' already exists. Overwrite?", app_path.display()))
+            .set_buttons(rfd::MessageButtons::YesNo)
+            .show();
+
+        if result == rfd::MessageDialogResult::No {
+            return;
+        }
+
+        let res = generate_shim_app(
+            &config,
+            self.exts.clone(),
+            &shim_path,
+            app_path.clone(),
+            true,
+        );
+
+        match res {
+            Ok(()) => return,
+            Err(GenErr::Other(msg)) => {
+                show_modal(msg);
+                return;
+            },
+            Err(GenErr::AppAlreadyExists) =>
+                show_modal(format!("Still couldn't write destination '{}'", app_path.display())),
+        }
     }
+
 }
 
 impl eframe::App for EchidnaApp {
@@ -69,26 +129,10 @@ impl eframe::App for EchidnaApp {
 
             if ui.button("Generate!").clicked() {
                 if self.cmd.is_empty() {
-                    show_modal("Command may not be empty".to_string());
+                    show_modal("Command must not be empty".to_string());
                 } else {
-
-                    let mut dialog = FileDialog::new();
-                    if let Some(name) = &self.previous_name {
-                        // Shame to have to use to_string_lossy(), everwhere else, the filename is
-                        // an OsStr(ing). At least here the user has the chance  to fix it if it
-                        // gets mangled.
-                        dialog = dialog.set_file_name(name.to_string_lossy());
-                    }
-                    if let Some(path) = dialog.save_file() {
-                        self.previous_name = path.file_name().map(|x| x.to_owned());
-                        match self.generate(path) {
-                            Ok(()) => (),
-                            Err(e) => show_modal(e),
-                        }
-                    }
-
+                    self.generate();
                 }
-
             }
         });
     }
