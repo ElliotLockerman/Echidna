@@ -125,20 +125,6 @@ fn write_info_plist(app_name: &str, exts: &str, contents: &Path) -> Result<(), S
     Ok(())
 }
 
-fn write_config(config: &Config, resources: &Path) -> Result<(), String> {
-    let config_dir = resources.join("config.json5");
-
-    let config_json = serde_json::to_string(config).map_err(|e|
-        format!("Error serializing config {config:?}: {e}")
-    )?;
-
-    fs::write(&config_dir, config_json).map_err(|e|
-        format!("Error writing config to temporary directory '{}': {e}", config_dir.display())
-    )?;
-
-    Ok(())
-}
-
 // Returns (app_name, bundle_name); app_name is without .app, bundle_* has it
 fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), String> {
     let app_name = || app_path.file_name()
@@ -210,7 +196,7 @@ pub fn generate_shim_app(
 
     write_info_plist(&app_name.to_string_lossy(), &exts, &contents)?;
     write_shim_bin(&app_name, &mac_os, shim_bin)?;
-    write_config(config, &resources)?;
+    config.write(&resources)?;
 
     if bundle_path.exists() {
         return Err(format!("'{}' already exists", bundle_path.display()));

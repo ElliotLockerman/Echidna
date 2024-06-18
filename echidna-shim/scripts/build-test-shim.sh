@@ -50,5 +50,5 @@ mkdir "${APP_DIR}/Contents/Resources"
 
 cp "${TARGET_DIR}/${BUILD_KIND}/echidna-shim" "${APP_DIR}/Contents/MacOS/TestEchidnaShim"
 cp "${SHIM_DIR}/app_files/test_Info.plist" "${APP_DIR}/Contents/Info.plist"
-cp "${SHIM_DIR}/app_files/test_config.json5" "${APP_DIR}/Contents/Resources/config.json5"
+cp "${SHIM_DIR}/app_files/test_config.json" "${APP_DIR}/Contents/Resources/config.json"
 

@@ -1281,7 +1281,7 @@ dependencies = [
  "clap",
  "log",
  "serde",
- "serde_json5",
+ "serde_json",
  "simple-logging",
 ]
 
@@ -3563,17 +3563,6 @@ checksum = "455182ea6142b14f93f4bc5320a2b31c1f266b66a4a5c858b013302a5d8cbfc3"
 dependencies = [
  "itoa",
  "ryu",
- "serde",
-]
-
-[[package]]
-name = "serde_json5"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32a6b754515e1a7bd79fc2edeaecee526fc80cb3a918607e5ca149225a3a9586"
-dependencies = [
- "pest",
- "pest_derive",
  "serde",
 ]
 
