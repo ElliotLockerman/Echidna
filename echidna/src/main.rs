@@ -5,6 +5,7 @@ use echidna_lib::{generate_shim_app, GenErr};
 
 use std::sync::Arc;
 use std::ffi::OsString;
+use std::path::PathBuf;
 
 use eframe::egui;
 use egui::viewport::IconData;
@@ -28,7 +29,7 @@ impl EchidnaApp {
         }
     }
     
-    fn generate(&mut self) {
+    fn generate_inner(&mut self) -> Result<(), String> {
         let mut dialog = FileDialog::new();
         if let Some(name) = &self.previous_name {
             // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -37,18 +38,12 @@ impl EchidnaApp {
             dialog = dialog.set_file_name(name.to_string_lossy());
         }
         let Some(app_path) = dialog.save_file() else {
-            return;
+            return Ok(());
         };
         self.previous_name = app_path.file_name().map(|x| x.to_owned());
 
         let config = Config::new(self.cmd.clone(), self.group_by);
-        let shim_path = match get_app_resources() {
-            Ok(x) => x.join("echidna-shim"),
-            Err(e) => {
-                show_modal(e);
-                return;
-            }
-        };
+        let shim_path = get_shim_path()?;
 
         let res = generate_shim_app(
             &config,
@@ -59,13 +54,11 @@ impl EchidnaApp {
         );
 
         match res {
-            Ok(()) => return,
+            Ok(()) => return Ok(()),
             Err(err) => match err {
                 GenErr::Other(msg) => {
-                    show_modal(msg);
-                    return;
+                    return Err(msg);
                 },
-
                 GenErr::AppAlreadyExists => (),
             }
         }
@@ -79,7 +72,7 @@ impl EchidnaApp {
             .show();
 
         if result == rfd::MessageDialogResult::No {
-            return;
+            return Ok(());
         }
 
         let res = generate_shim_app(
@@ -91,13 +84,21 @@ impl EchidnaApp {
         );
 
         match res {
-            Ok(()) => return,
+            Ok(()) => (),
             Err(GenErr::Other(msg)) => {
-                show_modal(msg);
-                return;
+                return Err(msg);
             },
-            Err(GenErr::AppAlreadyExists) =>
-                show_modal(format!("Still couldn't write destination '{}'", app_path.display())),
+            Err(GenErr::AppAlreadyExists) => {
+                return Err(format!("Still couldn't write destination '{}'", app_path.display()));
+            },
+        }
+
+        Ok(())
+    }
+
+    fn generate(&mut self) {
+        if let Err(e) = self.generate_inner() {
+            show_modal(e);
         }
     }
 
@@ -137,6 +138,46 @@ impl eframe::App for EchidnaApp {
         });
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+fn get_shim_path() -> Result<PathBuf, String> {
+    // Standard location: the app bundle's Resources folder.
+    let shim_path = {
+        let mut rsc = get_app_resources()?;
+        rsc.push("echidna-shim");
+        rsc
+    };
+
+    if shim_path.exists() {
+        return Ok(shim_path);
+    }
+
+    if shim_path.exists() {
+        return Ok(shim_path);
+    }
+
+    // Maybe they're running the executable directly from the targets/ directory? Then echidna-shim
+    // will be right there.
+    let shim_path = {
+        let mut path = std::env::current_exe()
+            .map_err(|e| format!("Failed to get current ext: {e}"))?;
+
+        if !path.pop() {
+            return Err(format!("Couldn't pop binary filename from path '{}' !?", shim_path.display()));
+        }
+        path.push("echidna-shim");
+        path
+    };
+
+    if shim_path.exists() {
+        return Ok(shim_path);
+    }
+
+    // TODO: argument or environment variable for non-standard uses.
+    return Err("Can't find echidna-shim executable".to_owned());
+}
+
 
 fn show_modal(msg: String) {
     rfd::MessageDialog::new()
