@@ -4,6 +4,7 @@ use echidna_util::config::{Config, GroupBy};
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::ffi::OsString;
 
 use eframe::egui;
 use egui::viewport::IconData;
@@ -17,6 +18,7 @@ struct EchidnaApp {
     cmd: String,
     exts: String,
     group_by: GroupBy,
+    previous_name: Option<OsString>,
 }
 
 impl EchidnaApp {
@@ -69,12 +71,22 @@ impl eframe::App for EchidnaApp {
                 if self.cmd.is_empty() {
                     show_modal("Command may not be empty".to_string());
                 } else {
-                    if let Some(path) = FileDialog::new().save_file() {
+
+                    let mut dialog = FileDialog::new();
+                    if let Some(name) = &self.previous_name {
+                        // Shame to have to use to_string_lossy(), everwhere else, the filename is
+                        // an OsStr(ing). At least here the user has the chance  to fix it if it
+                        // gets mangled.
+                        dialog = dialog.set_file_name(name.to_string_lossy());
+                    }
+                    if let Some(path) = dialog.save_file() {
+                        self.previous_name = path.file_name().map(|x| x.to_owned());
                         match self.generate(path) {
                             Ok(()) => (),
                             Err(e) => show_modal(e),
                         }
                     }
+
                 }
 
             }
