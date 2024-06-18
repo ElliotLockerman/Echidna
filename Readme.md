@@ -1,14 +1,14 @@
 
-# Echidna
+![Echidna Header](media/header.png)
 
-![Screenshot](media/opening_file.gif)
 
 Echidna is a Mac app for generating "shim applications" that allow opening files with terminal programs by double clicking on the files' icons. For example, you could generate a shim app to open double-clicked source files in `(n)vim` or `emacs`. Files can also be opened with the selected terminal application by dragging to the shim's icon in the Finder or Dock or selecting the shim app from the `Open With` menu after right-clicking on the file icon. Echidna's name, like its functionality, is inspired by [Platypus](https://sveinbjorn.org/platypus) ([Github](https://github.com/sveinbjornt/Platypus), a wonderful Mac app for wrapping scripts in GUIs.
 
+![Demo Screenshot](media/opening_file.gif)
 
 ## Usage
 
-![Screenshot](media/screenshot_0.png)
+![UI Screenshot](media/screenshot_0.png)
 
 After launching Echidna, first fill out the fields:
 
