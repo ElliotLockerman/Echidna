@@ -3,8 +3,10 @@ use echidna_util::get_app_resources;
 use echidna_util::config::{Config, GroupBy};
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use eframe::egui;
+use egui::viewport::IconData;
 use rfd::FileDialog;
 
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 200.0);
@@ -89,10 +91,33 @@ fn show_modal(msg: String) {
         .show();
 }
 
+fn load_icon() -> Arc<IconData> {
+    let image_ret = image::load_from_memory(include_bytes!("../app_files/icon.png"))
+        .map(|x| x.into_rgb8());
+
+    let image = match image_ret {
+        Ok(x) => x,
+        Err(_) => {
+            // TODO: logging
+            return std::sync::Arc::new(egui::viewport::IconData::default());
+        },
+    };
+
+    let (width, height) = image.dimensions();
+    let data = IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    };
+
+    Arc::new(data)
+}
+
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_min_inner_size(MIN_INNER_SIZE),
+            .with_min_inner_size(MIN_INNER_SIZE)
+            .with_icon(load_icon()),
         ..Default::default()
     };
 
