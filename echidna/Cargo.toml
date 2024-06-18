@@ -8,4 +8,5 @@ echidna-lib = { path = "../echidna-lib" }
 echidna-util = { path = "../echidna-util" }
 eframe = {version = "0.27.2", features = ["persistence"]}
 image = "0.25.1"
+opener = { version = "0.7.1", features = ["reveal"] }
 rfd = "0.14.1"

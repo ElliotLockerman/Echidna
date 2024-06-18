@@ -54,7 +54,12 @@ impl EchidnaApp {
         );
 
         match res {
-            Ok(()) => return Ok(()),
+            Ok(final_path) => {
+                if let Err(e) = opener::reveal(final_path) {
+                    eprintln!("{e}"); // No modal, failure here does no real harm.
+                }
+                return Ok(());
+            },
             Err(err) => match err {
                 GenErr::Other(msg) => {
                     return Err(msg);
@@ -83,14 +88,18 @@ impl EchidnaApp {
             true,
         );
 
-        match res {
-            Ok(()) => (),
+        let final_path = match res {
+            Ok(x) => x,
             Err(GenErr::Other(msg)) => {
                 return Err(msg);
             },
             Err(GenErr::AppAlreadyExists) => {
                 return Err(format!("Still couldn't write destination '{}'", app_path.display()));
             },
+        };
+
+        if let Err(e) = opener::reveal(final_path) {
+            eprintln!("{e}"); // No modal, failure here does no real harm.
         }
 
         Ok(())

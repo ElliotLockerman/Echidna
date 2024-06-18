@@ -55,6 +55,7 @@ fn main() -> Result<(), String> {
         &shim_path,
         args.out_path.clone(),
         args.force,
-    ).map_err(|e| e.to_msg(&args.out_path))
+    ).map(|_| ())
+        .map_err(|e| e.to_msg(&args.out_path))
 }
 

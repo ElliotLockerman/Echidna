@@ -221,14 +221,15 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// exts is a comma-delimited list of extensions to support
+// exts is a comma-delimited list of extensions to support.
+// Returns path to app bundle on success.
 pub fn generate_shim_app(
     config: &Config,
     exts: String,
     shim_bin: &Path,
     app_path: PathBuf,
     overwrite: bool
-) -> Result<(), GenErr> {
+) -> Result<PathBuf, GenErr> {
 
     let (app_name, bundle_name, final_bundle_path) = get_names(app_path)?;
 
@@ -266,8 +267,8 @@ pub fn generate_shim_app(
     write_shim_bin(&app_name, &mac_os, shim_bin)?;
     config.write(&resources).map_err(|e| gen_err_other!("{e}"))?;
 
-    move_bundle(app_root, final_bundle_path, overwrite)?;
+    move_bundle(app_root, &final_bundle_path, overwrite)?;
 
-    Ok(())
+    Ok(final_bundle_path)
 }
 
