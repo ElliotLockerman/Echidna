@@ -1,4 +1,6 @@
 
+use std::fmt;
+
 use serde::{Serialize, Deserialize};
 use clap::ValueEnum;
 
@@ -14,12 +16,12 @@ impl Default for GroupBy {
     }
 }
 
-impl std::string::ToString for GroupBy {
-    fn to_string(&self) -> String {
+impl fmt::Display for GroupBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // For use by clap, lower case since actual cli arguments would be lower case
         match self {
-            GroupBy::None => "none".to_owned(),
-            GroupBy::All => "all".to_owned(),
+            GroupBy::None => write!(f, "none"),
+            GroupBy::All => write!(f, "all"),
         }
     }
 }

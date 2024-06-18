@@ -90,7 +90,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 #[cfg(target_os = "macos")]
 fn write_shim_bin(app_name: &OsStr, mac_os: &Path, shim_bin: &Path) -> Result<(), String> {
     let bin_path = mac_os.join(app_name);
-    fs::copy(shim_bin, &bin_path).map_err(|e|
+    fs::copy(shim_bin, bin_path).map_err(|e|
         format!("Error copying shim binary '{}' to temporary directory '{}': {e}", shim_bin.display(), mac_os.display())
     )?;
 
@@ -198,7 +198,7 @@ pub fn generate_shim_app(
         })
     };
 
-    let app_root = tmp_dir.path().join(&bundle_name);
+    let app_root = tmp_dir.path().join(bundle_name);
     let contents = app_root.join("Contents");
     let mac_os = contents.join("MacOS");
     let resources = contents.join("Resources");
