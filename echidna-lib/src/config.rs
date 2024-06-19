@@ -44,7 +44,7 @@ impl Config {
     }
 
     pub fn load() -> Result<Config, String> {
-        let mut path = crate::get_app_resources()?;
+        let mut path = crate::misc::get_app_resources()?;
         path.push("config.json");
 
         let conf_str = std::fs::read_to_string(path).map_err(ts)?;

@@ -1,6 +1,6 @@
 
-use echidna_util::get_app_resources;
-use echidna_util::config::{Config, GroupBy};
+use echidna_lib::misc::get_app_resources;
+use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::{generate_shim_app, GenErr};
 
 use std::sync::Arc;

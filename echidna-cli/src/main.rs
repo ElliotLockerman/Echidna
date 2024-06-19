@@ -1,5 +1,5 @@
 
-use echidna_util::config::{Config, GroupBy};
+use echidna_lib::config::{Config, GroupBy};
 
 use std::path::PathBuf;
 

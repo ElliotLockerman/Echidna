@@ -1,6 +1,4 @@
 
-pub mod config;
-
 use std::path::PathBuf;
 
 // Get the path to the currently executing app bundle's Resources directory.

@@ -15,15 +15,15 @@ After launching Echidna, first fill out the fields:
 - **Command**: The terminal program to execute. The files, space-delimited, will be appended to this string and passed to the terminal.
 - **Extensions**: Optionally add extensions for the shim app to support. Adding extensions makes your shim app appear in the `Open With` menu for files with supported extensions, but will prevent files with other extensions from being dragged to your shim app. Files with other extensions can still be opened by double-clicking if your shim app is selected in the `Open With` -> `Other...` dialog (You may have to select `All Applications` in the `Enable` drop-down)
 - **Open Files: () Together, () Individually**: If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
+- **Identifier**: The bundle identifier for the shim app. This can be any unique string, but is usually a reverse URL withe app name as the final component.
 
 Then click `Save As..`, provide a file name and directory, and click `Save`. You can then set your shim app as the `Open With` handler, or launch it to provide a draggable target in the dock bar (no windows will appear after being launched, and launching isn't necessary for other use pattern).
 
 
 ## Repo Structure
 
-- `echidna-util`: `lib`. Small pieces of functionality that have no dependencies within Echidna.
 - `echidna-shim`: `bin`. The binary that runs within the generated shim app, receiving the double-clicked files and launching the terminal session.
-- `echidna-lib`: `lib`. The library with the core Echidna functionality of generating specialized shim apps. Depends on `echidna-util` (as a library in the traditional manner), and `bin` (compiled in as a `CONST` variable). This dependency on a binary is why `make` is used rather than `cargo build`: `cargo` does not (yet) support binary dependencies, so if `echidna-shim` is not manually rebuilt before each `echidna-lib` build, an out-of-date `echidna-shim` might be used.
+- `echidna-lib`: `lib`. The library with the core Echidna functionality of generating specialized shim apps.
 - `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`. By default, `echidna-cli` looks for an `echidna-shim` binary in the same directory, but this can be overwritten with a command-line flag. `echidna-cli` _should not_ be run with `cargo run`, as Cargo is not aware of the dependency between `echidna-cli` and `echidna-shim`, and a stale version of `echidna-shim` may be used.
 - `echidna`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
 
@@ -32,4 +32,6 @@ Then click `Save As..`, provide a file name and directory, and click `Save`. You
 
 **TLDR: Run `./build.sh [--debug | --release]`**
 
-`cargo build` builds the Rust binaries, but to run `echidna-cli` and build the `Echidna.app` Mac app bundle, you have to run `cargo build --workspace` and `./echidna/scripts/make-app.sh` (which is what `./build.sh` does). `--workspace` is required because `echidna-cli` and `Echidna.app` have a runtime dependency on `echidna-shim`, but Cargo doesn't currently doesn't support this kind of dependency, so running `cargo build` may result in a stale version of `echidna-shim` being used. `Echidna.app` will be built in `target/{BUILD_MODE}/Echidna.app`.
+`build.sh` runs `cargo build --workspace`, then `./echidna/scripts/make-app.sh`, which builds `Echidna.app` (`target/{BUILD_MODE}/Echidna.app`), a Mac app bundle that includes `echidana` and `echidna-shim`.
+
+`cargo run` _should not_ be used, see `echidna-cli` above.

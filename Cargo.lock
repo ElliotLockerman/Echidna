@@ -1270,7 +1270,6 @@ version = "0.1.0"
 dependencies = [
  "better_default",
  "echidna-lib",
- "echidna-util",
  "eframe",
  "image 0.25.1",
  "opener",
@@ -1283,17 +1282,16 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "echidna-lib",
- "echidna-util",
 ]
 
 [[package]]
 name = "echidna-lib"
 version = "0.1.0"
 dependencies = [
- "echidna-shim",
- "echidna-util",
+ "clap",
  "handlebars",
  "libc",
+ "serde",
  "serde_json",
  "tempdir",
 ]
@@ -1303,24 +1301,13 @@ name = "echidna-shim"
 version = "0.1.0"
 dependencies = [
  "cacao",
- "echidna-util",
+ "echidna-lib",
  "home",
  "log",
  "serde_json",
  "shell-quote",
  "simple-logging",
  "url",
-]
-
-[[package]]
-name = "echidna-util"
-version = "0.1.0"
-dependencies = [
- "clap",
- "log",
- "serde",
- "serde_json",
- "simple-logging",
 ]
 
 [[package]]

@@ -2,7 +2,6 @@
 
 members = [
     "echidna-cli",
-    "echidna-util",
     "echidna-lib",
     "echidna-shim",
     "echidna",

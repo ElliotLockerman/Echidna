@@ -1,5 +1,8 @@
 
-use echidna_util::config::Config;
+pub mod config;
+pub mod misc;
+
+use crate::config::Config;
 
 use std::path::{Path, PathBuf};
 use std::fs;
