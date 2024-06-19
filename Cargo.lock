@@ -1281,6 +1281,7 @@ dependencies = [
  "echidna-shim",
  "echidna-util",
  "handlebars",
+ "libc",
  "serde_json",
  "tempdir",
 ]

@@ -185,9 +185,6 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
 
     let (tmp_bundle, dst_bundle) = (tmp_bundle.as_ref(), dst_bundle.as_ref());
 
-    if !overwrite && dst_bundle.exists() {
-        return Err(GenErr::AppAlreadyExists);
-    }
 
     // We'll get an error if we try to overwrite a non-empty bundle (the likely case). Instead,
     // try to move it to the tmp dir; if we get an error trying to move the new bundle, we can try to
@@ -201,13 +198,17 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
         }
     }
 
-    let res = fs::rename(&tmp_bundle, &dst_bundle).map_err(|e|
-        gen_err_other!(
-            "Error moving temporary app '{}' to out_dir '{}': {e}",
-            tmp_bundle.display(),
-            dst_bundle.display(),
-        )
-    );
+    // The actual rename
+    let res = fs::rename(&tmp_bundle, &dst_bundle).map_err(|e| {
+        match e.raw_os_error() {
+            Some(libc::ENOTEMPTY) => GenErr::AppAlreadyExists, // ErrorKind::DirectoryNotEmpty not available on stable
+            Some(_) | None => gen_err_other!(
+                "Error moving temporary app '{}' to out_dir '{}': {e}",
+                tmp_bundle.display(),
+                dst_bundle.display(),
+            ),
+        }
+    });
 
     if res.is_err() && saved_bundle.is_some() {
         // Best effort.
