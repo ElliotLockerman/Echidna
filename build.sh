@@ -30,6 +30,6 @@ else
     exit 1
 fi
 
-cargo build --workspace ${RELEASE:+"--release"}
-./echidna/scripts/make-app.sh "$BUILD_FLAG"
+cargo build --all ${RELEASE:+"--release"}
+./scripts/make-app.sh "$BUILD_FLAG"
 

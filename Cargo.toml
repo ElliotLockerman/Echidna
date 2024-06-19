@@ -1,9 +1,40 @@
-[workspace]
+[package]
+name = "echidna"
+version = "0.1.0"
+edition = "2021"
 
-members = [
-    "echidna-cli",
-    "echidna-lib",
-    "echidna-shim",
-    "echidna",
-]
+[[bin]]
+name = "echidna"
+path = "src/bin/app.rs"
+
+[[bin]]
+name = "echidna-cli"
+path = "src/bin/cli.rs"
+
+[[bin]]
+name = "echidna-shim"
+path = "src/bin/shim.rs"
+
+[lib]
+name = "echidna_lib"
+
+
+[dependencies]
+better_default = "1.0.0"
+eframe = {version = "0.27.2", features = ["persistence"]}
+image = "0.25.1"
+opener = { version = "0.7.1", features = ["reveal"] }
+rfd = "0.14.1"
+cacao = "0.3.2"
+home = "0.5.9"
+log = "0.4.21"
+simple-logging = "2.0.2"
+url = "2.5.1"
+shell-quote = "0.5.0"
+serde = "1.0.203"
+serde_json = "1.0.117"
+handlebars = "5.1.2"
+tempdir = "0.3.7"
+libc = "0.2.155"
+clap = { version = "4.5.7", features = ["derive"] }
 

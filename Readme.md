@@ -23,7 +23,7 @@ Then click `Save As..`, provide a file name and directory, and click `Save`. You
 ## Repo Structure
 
 - `echidna-shim`: `bin`. The binary that runs within the generated shim app, receiving the double-clicked files and launching the terminal session.
-- `echidna-lib`: `lib`. The library with the core Echidna functionality of generating specialized shim apps.
+- `echidna_lib`: `lib`. The library with the core Echidna functionality of generating specialized shim apps.
 - `echidna-cli`: `bin`. A command line tool to generate shim apps. Essentially a thin wrapper around `echidna-lib`. By default, `echidna-cli` looks for an `echidna-shim` binary in the same directory, but this can be overwritten with a command-line flag. `echidna-cli` _should not_ be run with `cargo run`, as Cargo is not aware of the dependency between `echidna-cli` and `echidna-shim`, and a stale version of `echidna-shim` may be used.
 - `echidna`: `bin`. A GUI tool to generate shim apps. Essentially a (slightly less) thin wrapper around `echidna-lib`.
 
@@ -32,6 +32,6 @@ Then click `Save As..`, provide a file name and directory, and click `Save`. You
 
 **TLDR: Run `./build.sh [--debug | --release]`**
 
-`build.sh` runs `cargo build --workspace`, then `./echidna/scripts/make-app.sh`, which builds `Echidna.app` (`target/{BUILD_MODE}/Echidna.app`), a Mac app bundle that includes `echidana` and `echidna-shim`.
+`build.sh` runs `cargo build --all`, then `./echidna/scripts/make-app.sh`, which builds `Echidna.app` (`target/{BUILD_MODE}/Echidna.app`), a Mac app bundle that includes `echidana` and `echidna-shim`.
 
 `cargo run` _should not_ be used, see `echidna-cli` above.

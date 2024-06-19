@@ -26,8 +26,7 @@ else
 fi
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-SRC_DIR="${SCRIPT_DIR}/.."
-REPO_DIR="${SCRIPT_DIR}/../.."
+REPO_DIR="${SCRIPT_DIR}/.."
 
 TARGET_DIR="${REPO_DIR}/target/${BUILD_MODE}"
 APP_DIR="${TARGET_DIR}/Echidna.app"
@@ -39,7 +38,7 @@ mkdir "${APP_DIR}/Contents/MacOS"
 mkdir "${APP_DIR}/Contents/Resources"
 
 cp "${TARGET_DIR}/echidna" "${APP_DIR}/Contents/MacOS/Echidna"
-cp "${SRC_DIR}/app_files/Info.plist" "${APP_DIR}/Contents/Info.plist"
-cp "${SRC_DIR}/app_files/icon.png" "${APP_DIR}/Contents/Resources/AppIcon.icns"
+cp "${REPO_DIR}/app_files/Info.plist" "${APP_DIR}/Contents/Info.plist"
+cp "${REPO_DIR}/app_files/icon.png" "${APP_DIR}/Contents/Resources/AppIcon.icns"
 cp "${TARGET_DIR}/echidna-shim" "${APP_DIR}/Contents/Resources"
 

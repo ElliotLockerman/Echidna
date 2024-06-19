@@ -251,7 +251,7 @@ fn modal<S: Into<String>>(msg: S) {
 }
 
 fn load_icon() -> Arc<IconData> {
-    let image_ret = image::load_from_memory(include_bytes!("../app_files/icon.png"))
+    let image_ret = image::load_from_memory(include_bytes!("../../app_files/icon.png"))
         .map(|x| x.into_rgb8());
 
     let image = match image_ret {
