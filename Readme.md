@@ -12,7 +12,7 @@ Echidna is a Mac app for generating "shim applications" that allow opening files
 
 After launching Echidna, first fill out the fields:
 
-- **Command**: The terminal program to execute. The paths of the double-clicked files will be appended to this, so if your terminal application supports `--` to separate positional arguments from flags, it's recommended (e.g., if you want to open your files with `nvim`, type `nvim --` as the command, so a file named `-example.txt` opened rather than putting `nvim` in to `ex` mode).
+- **Command**: The terminal program to execute. The files, space-delimited, will be appended to this string and passed to the terminal.
 - **Extensions**: Optionally add extensions for the shim app to support. Adding extensions makes your shim app appear in the `Open With` menu for files with supported extensions, but will prevent files with other extensions from being dragged to your shim app. Files with other extensions can still be opened by double-clicking if your shim app is selected in the `Open With` -> `Other...` dialog (You may have to select `All Applications` in the `Enable` drop-down)
 - **Open Files: () Together, () Individually**: If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
 

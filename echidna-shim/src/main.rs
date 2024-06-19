@@ -4,6 +4,7 @@ use echidna_util::config::{Config, GroupBy};
 use std::process::Command;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
+use std::os::unix::ffi::OsStringExt;
 
 use core::str::FromStr;
 
@@ -11,6 +12,8 @@ use cacao::appkit::{App, AppDelegate, Alert};
 use url::Url;
 use log::{error, info};
 use std::env::VarError;
+use shell_quote::Bash;
+
 
 fn init_log() {
     const LEVEL_KEY: &str = "ECH_SHIM_LOG_LEVEL";
@@ -63,7 +66,7 @@ fn init_log() {
 fn modal<T: AsRef<str>, M: AsRef<str>>(title: T, msg: M) {
     let (title, msg) = (title.as_ref(), msg.as_ref());
     error!("modal {title}: {msg}");
-    Alert::new(title, msg).show()
+    Alert::new(title, msg).show();
 }
 
 macro_rules! sum_of_len_rec {
@@ -106,6 +109,24 @@ macro_rules! os_cat {
     }};
 }
 
+fn bash_quote<S: AsRef<OsStr>>(string: S) -> OsString {
+    let string = string.as_ref();
+    OsString::from_vec(Bash::quote(string))
+}
+
+fn js_quote(string: OsString) -> Result<String, String> {
+
+    // TODO: avoid this, non-unicode should be passed along (although if JXA requires it to be
+    // unicode, it may not matter).
+    let string = string.into_string().map_err(|e| format!("{e:?} isn't valid unicode"))?;
+
+    // Its much easier to find a JSON string-escaping tool than a JavaScript one, and it sounds like these
+    // days they're equivalent.
+    let string = serde_json::to_string(&string).map_err(|e| format!("{e:?} isn't valid a valid JSON string (its a long story)"))?;
+
+    Ok(string)
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -146,21 +167,24 @@ impl AppDelegate for EchidnaShimDelegate {
 
         let mut cmd = OsString::new();
         if let Some(parent) = paths[0].parent() {
-            cmd = os_cat!("cd ", "'", parent, "'; ");
+            let parent = bash_quote(parent);
+            cmd = os_cat!("cd ", &parent, "; ");
         }
 
         match self.config.group_open_by {
             GroupBy::All => {
                 cmd = os_cat!(&cmd, &self.config.command);
                 for path in paths {
-                    cmd = os_cat!(&cmd, " '", &path, "'");
+                    let path = bash_quote(path);
+                    cmd = os_cat!(&cmd, " ", &path);
                 }
-                run_script_or_modal(cmd);
+                run_script_or_modal(&cmd);
             },
             GroupBy::None => {
                 for path in paths {
-                    let cmd2 = os_cat!(&cmd, &self.config.command, " '", &path, "'");
-                    run_script_or_modal(cmd2);
+                    let path = bash_quote(path);
+                    let cmd2 = os_cat!(&cmd, &self.config.command, " ", &path);
+                    run_script_or_modal(&cmd2);
                 }
             }
         }
@@ -172,16 +196,23 @@ impl AppDelegate for EchidnaShimDelegate {
     }
 }
 
-fn run_script_or_modal<S: AsRef<OsStr>>(bash: S) {
-    let bash = bash.as_ref();
-    if let Err(e) = run_script(bash) {
+fn run_script_or_modal(bash: &OsStr) {
+    let bash = match js_quote(bash.to_owned()) {
+        Ok(x) => x,
+        Err(e) => {
+            modal("Error", format!("`{bash:?}` isn't valid js: {e}"));
+            return;
+        }
+    };
+
+
+    if let Err(e) = run_script(&bash) {
         modal("Error", format!("Error running `{bash:?}`: {e}"));
     }
 }
 
-fn run_script<S: AsRef<OsStr>>(bash: S) -> Result<(), String> {
-    // TODO: figure out escaping edge cases.
-    let js = os_cat!(r#"Application("Terminal").doScript(""#, bash.as_ref(), r#"");"#);
+fn run_script(bash: &str) -> Result<(), String> {
+    let js = r#"Application("Terminal").doScript("#.to_owned() + bash + r#");"#;
     run(
         "osascript",
         [
