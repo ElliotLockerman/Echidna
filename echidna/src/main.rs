@@ -10,26 +10,34 @@ use std::path::PathBuf;
 use eframe::egui;
 use egui::viewport::IconData;
 use rfd::FileDialog;
+use egui::TextEdit;
 
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 200.0);
-const GENERATE_PADDING: f32 = 15.0;
+const SECTION_PADDING: f32 = 15.0;
 
 #[derive(Default)]
 struct EchidnaApp {
     cmd: String,
     exts: String,
     group_by: GroupBy,
-    previous_name: Option<OsString>,
+    identifier: String,
+    previous_name: Option<OsString>, // Previous name chosen by Save As
 }
 
 impl EchidnaApp {
     fn new() -> Self {
-        EchidnaApp {
-            ..Default::default()
-        }
+        EchidnaApp::default()
     }
     
     fn generate_inner(&mut self) -> Result<(), String> {
+        if self.cmd.is_empty() {
+            return Err("Command must not be empty".to_string());
+        }
+
+        if self.identifier.is_empty() {
+            return Err("Identifier must not be empty".to_string());
+        }
+
         let mut dialog = FileDialog::new();
         if let Some(name) = &self.previous_name {
             // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -48,6 +56,7 @@ impl EchidnaApp {
         let res = generate_shim_app(
             &config,
             self.exts.clone(),
+            &self.identifier,
             &shim_path,
             app_path.clone(),
             false,
@@ -83,6 +92,7 @@ impl EchidnaApp {
         let res = generate_shim_app(
             &config,
             self.exts.clone(),
+            &self.identifier,
             &shim_path,
             app_path.clone(),
             true,
@@ -107,7 +117,7 @@ impl EchidnaApp {
 
     fn generate(&mut self) {
         if let Err(e) = self.generate_inner() {
-            show_modal(e);
+            modal(e);
         }
     }
 
@@ -116,16 +126,21 @@ impl EchidnaApp {
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Grid::new(0).num_columns(2).show(ui, |ui| {
+
+            egui::Grid::new("Execution").num_columns(2).show(ui, |ui| {
                 ui.label("Command:");
-                let cmd = egui::TextEdit::singleline(&mut self.cmd);
-                ui.add(cmd);
+                ui.centered_and_justified(|ui| {
+                    let cmd = egui::TextEdit::singleline(&mut self.cmd);
+                    ui.add(cmd);
+                });
                 ui.end_row();
 
                 ui.label("Extensions:");
-                let exts = egui::TextEdit::singleline(&mut self.exts)
-                    .hint_text("Optional; see Readme");
-                ui.add(exts);
+                ui.centered_and_justified(|ui| {
+                    let exts = TextEdit::singleline(&mut self.exts)
+                        .hint_text("Optional; see Readme");
+                    ui.add(exts);
+                });
                 ui.end_row();
 
                 ui.label("Open Files:");
@@ -133,16 +148,22 @@ impl eframe::App for EchidnaApp {
                     ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
                     ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
                 });
+                ui.end_row();
+
+                ui.label("Identifier:");
+                ui.centered_and_justified(|ui| {
+                    let id = TextEdit::singleline(&mut self.identifier)
+                        .hint_text("Unique reverse-domain, e.g., com.yourname.AppName");
+                    ui.add(id);
+                });
+                ui.end_row();
+
             });
 
-            ui.add_space(GENERATE_PADDING);
+            ui.add_space(SECTION_PADDING);
 
-            if ui.button("Generate!").clicked() {
-                if self.cmd.is_empty() {
-                    show_modal("Command must not be empty".to_string());
-                } else {
-                    self.generate();
-                }
+            if ui.button("Save As..").clicked() {
+                self.generate();
             }
         });
     }
@@ -188,7 +209,7 @@ fn get_shim_path() -> Result<PathBuf, String> {
 }
 
 
-fn show_modal(msg: String) {
+fn modal<S: Into<String>>(msg: S) {
     rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Error)
         .set_title("Error")

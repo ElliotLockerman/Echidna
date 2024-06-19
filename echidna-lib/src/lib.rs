@@ -12,9 +12,6 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
 
-    <key>CFBundleDisplayName</key>
-    <string>{{app_display_name}}</string>
-
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
@@ -50,7 +47,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <string>{{app_display_name}}</string>
 
     <key>CFBundleIdentifier</key>
-    <string>com.lockerman.EchidnaShim</string>
+    <string>{{identifier}}</string>
 
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
@@ -60,12 +57,6 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
     <key>CFBundlePackageType</key>
     <string>APPL</string>
-
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-
-    <key>LSMinimumSystemVersion</key>
-    <string>10.11.0</string>
 
     <key>LSUIElement</key>
     <false/>
@@ -114,7 +105,7 @@ macro_rules! gen_err_other {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(target_os = "macos")]
-fn write_shim_bin(app_name: &OsStr, mac_os: &Path, shim_bin: &Path) -> Result<(), GenErr> {
+fn write_shim_bin(mac_os: &Path, app_name: &OsStr, shim_bin: &Path) -> Result<(), GenErr> {
     let bin_path = mac_os.join(app_name);
     fs::copy(shim_bin, bin_path).map_err(|e|
         gen_err_other!("Error copying shim binary '{}' to temporary directory '{}': {e}", shim_bin.display(), mac_os.display())
@@ -130,7 +121,13 @@ fn parse_exts(exts: &str) -> Vec<String> {
         .collect::<Vec<_>>()
 }
 
-fn write_info_plist(app_name: &str, exts: &str, contents: &Path) -> Result<(), GenErr> {
+fn write_info_plist(
+    contents: &Path,
+    app_name: &str,
+    exts: &str,
+    identifier: &str,
+) -> Result<(), GenErr> {
+
     let extsv = parse_exts(exts);
 
     let reg = handlebars::Handlebars::new();
@@ -138,7 +135,8 @@ fn write_info_plist(app_name: &str, exts: &str, contents: &Path) -> Result<(), G
         INFO_PLIST_TEMPLATE,
         &serde_json::json!({
             "app_display_name": app_name,
-            "exts": extsv
+            "exts": extsv,
+            "identifier": identifier,
         }),
     ).map_err(|e| gen_err_other!("Error rendering Info.plist template: {e}"))?;
 
@@ -226,6 +224,7 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
 pub fn generate_shim_app(
     config: &Config,
     exts: String,
+    identifier: &str,
     shim_bin: &Path,
     app_path: PathBuf,
     overwrite: bool
@@ -263,8 +262,13 @@ pub fn generate_shim_app(
     pretty_create_dir(&mac_os)?;
     pretty_create_dir(&resources)?;
 
-    write_info_plist(&app_name.to_string_lossy(), &exts, &contents)?;
-    write_shim_bin(&app_name, &mac_os, shim_bin)?;
+    write_info_plist(
+        &contents,
+        &app_name.to_string_lossy(),
+        &exts,
+        identifier,
+    )?;
+    write_shim_bin(&mac_os, &app_name, shim_bin)?;
     config.write(&resources).map_err(|e| gen_err_other!("{e}"))?;
 
     move_bundle(app_root, &final_bundle_path, overwrite)?;

@@ -23,12 +23,19 @@ struct Args {
     #[arg(long)]
     shim_path: Option<String>,
 
+    #[arg(long)]
+    identifier: Option<String>,
+
     #[arg(long, short, action)]
     force: bool,
 }
 
 fn main() -> Result<(), String> {
     let args = Args::parse();
+
+    let identifier = args.identifier
+        .map(|x| x.clone()) // Just to make it the same type as the default, below.
+        .unwrap_or(format!("com.example.{}Opener", args.command));
 
     let config = Config::new(args.command, args.group_open_by);
 
@@ -52,6 +59,7 @@ fn main() -> Result<(), String> {
     echidna_lib::generate_shim_app(
         &config,
         args.exts,
+        &identifier,
         &shim_path,
         args.out_path.clone(),
         args.force,
