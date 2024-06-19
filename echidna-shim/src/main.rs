@@ -66,18 +66,46 @@ fn modal<T: AsRef<str>, M: AsRef<str>>(title: T, msg: M) {
     Alert::new(title, msg).show()
 }
 
-// I don't care about the extra allocations anymore, I'm just so sick of dealing
-// with OsStr/OsString
+macro_rules! sum_of_len_rec {
+    () => {{ 0 }};
+    ($acc:expr, $val:expr) => {{ *$acc += $val.len(); }};
+    ($acc:expr, $first:expr, $($rest:expr),+) => {{
+        *$acc += OsStr::new($first).len();
+        sum_of_len_rec!($acc, $($rest),+);
+    }};
+}
+
+macro_rules! sum_of_len {
+    () => {{ sum_of_len_rec!() }};
+    ($($vals:expr),*) => {{
+        let mut sum = 0usize;
+        sum_of_len_rec!(&mut sum, $($vals),+);
+        sum
+    }};
+}
+
+macro_rules! os_cat_rec {
+    ($acc:expr) => {{
+    }};
+    ($acc:expr, $only:expr) => {{
+        $acc.push(OsStr::new($only));
+    }};
+    ($acc:expr, $first:expr, $($rest:expr),+) => {{
+        $acc.push(OsStr::new($first));
+        os_cat_rec!($acc, $($rest),+);
+    }};
+}
+
+// Concatenate OSStr (and anything that implements AsRef<OsStr>)
 macro_rules! os_cat {
-    ($only:expr) => {
-        OsString::from($only)
-    };
-    ($first:expr, $($rest:expr),+) => {{
-        let mut os_string = OsString::from($first); 
-        os_string.push(os_cat!($($rest),+));
+    ($($vals:expr),*) => {{
+        let mut os_string = OsString::new();
+        os_string.reserve(sum_of_len!($($vals),*));
+        os_cat_rec!(&mut os_string, $($vals),*);
         os_string
     }};
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -123,15 +151,15 @@ impl AppDelegate for EchidnaShimDelegate {
 
         match self.config.group_open_by {
             GroupBy::All => {
-                cmd = os_cat!(cmd, &self.config.command);
+                cmd = os_cat!(&cmd, &self.config.command);
                 for path in paths {
-                    cmd = os_cat!(cmd, " '", path, "'");
+                    cmd = os_cat!(&cmd, " '", &path, "'");
                 }
                 run_script_or_modal(cmd);
             },
             GroupBy::None => {
                 for path in paths {
-                    let cmd2 = os_cat!(cmd.clone(), &self.config.command, " '", path, "'");
+                    let cmd2 = os_cat!(&cmd, &self.config.command, " '", &path, "'");
                     run_script_or_modal(cmd2);
                 }
             }
