@@ -15,13 +15,17 @@ use egui::TextEdit;
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 200.0);
 const SECTION_PADDING: f32 = 15.0;
 
-#[derive(Default)]
+#[derive(better_default::Default)]
 struct EchidnaApp {
     cmd: String,
     exts: String,
     group_by: GroupBy,
+
+    #[default("com.yourdomain.YourAppName".to_owned())]
     identifier: String,
+
     previous_name: Option<OsString>, // Previous name chosen by Save As
+    ident_ever_changed: bool,
 }
 
 impl EchidnaApp {
@@ -121,17 +125,42 @@ impl EchidnaApp {
         }
     }
 
+    fn update_default_ident(&mut self) {
+        self.identifier.clear();
+        self.identifier += "com.yourdomain.";
+
+        let word = self.cmd.trim().split_whitespace().next();
+        let word = match word {
+            Some(x) => x,
+            None => {
+                self.identifier += "YourAppName";
+                return;
+            },
+        };
+
+        let mut chars = word.chars();
+        let mut first = chars.next().expect("SplitWhitespace returned an empty string!?");
+        first.make_ascii_uppercase();
+
+        self.identifier.push(first);
+        self.identifier.extend(chars);
+        self.identifier += "Opener";
+    }
+
 }
 
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let mut cmd_changed = false;
 
+        egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("Execution").num_columns(2).show(ui, |ui| {
                 ui.label("Command:");
                 ui.centered_and_justified(|ui| {
                     let cmd = egui::TextEdit::singleline(&mut self.cmd);
-                    ui.add(cmd);
+                    if ui.add(cmd).changed() {
+                        cmd_changed = true;
+                    }
                 });
                 ui.end_row();
 
@@ -152,9 +181,12 @@ impl eframe::App for EchidnaApp {
 
                 ui.label("Identifier:");
                 ui.centered_and_justified(|ui| {
-                    let id = TextEdit::singleline(&mut self.identifier)
-                        .hint_text("Unique reverse-domain, e.g., com.yourname.AppName");
-                    ui.add(id);
+                    if cmd_changed && !self.ident_ever_changed {
+                        self.update_default_ident();
+                    }
+                    if ui.text_edit_singleline(&mut self.identifier).changed() {
+                        self.ident_ever_changed = true;
+                    }
                 });
                 ui.end_row();
 
