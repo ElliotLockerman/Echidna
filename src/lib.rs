@@ -49,6 +49,9 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundleExecutable</key>
     <string>{{app_display_name}}</string>
 
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+
     <key>CFBundleIdentifier</key>
     <string>{{identifier}}</string>
 
@@ -79,6 +82,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 "#;
 
+const SHIM_APP_ICON: &[u8] = include_bytes!("../app_files/ShimAppIcon.icns");
 
 
 pub enum GenErr {
@@ -178,6 +182,18 @@ fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), Gen
     Ok((app_name, bundle_name, app_path))
 }
 
+fn write_icon(resources: &Path) -> Result<(), GenErr> {
+    let mut shim_icon = resources.to_owned();
+    shim_icon.push("AppIcon.icns");
+    fs::write(shim_icon, SHIM_APP_ICON)
+        .map_err(|e| gen_err_other!(
+            "Error write shim's icon to temorary {}: {e}",
+            resources.display()
+        ))?;
+
+    Ok(())
+}
+
 fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     tmp_bundle: S,
     dst_bundle: D,
@@ -274,6 +290,7 @@ pub fn generate_shim_app(
     )?;
     write_shim_bin(&mac_os, &app_name, shim_bin)?;
     config.write(&resources).map_err(|e| gen_err_other!("{e}"))?;
+    write_icon(&resources)?;
 
     move_bundle(app_root, &final_bundle_path, overwrite)?;
 

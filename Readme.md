@@ -4,7 +4,9 @@
 
 Echidna is a Mac app for generating "shim applications" that allow opening files with terminal programs by double clicking on the files' icons. For example, you could generate a shim app to open double-clicked source files in `(n)vim` or `emacs`. Files can also be opened with the selected terminal application by dragging to the shim's icon in the Finder or Dock or selecting the shim app from the `Open With` menu after right-clicking on the file icon. Echidna's name, like its functionality, is inspired by [Platypus](https://sveinbjorn.org/platypus) ([Github](https://github.com/sveinbjornt/Platypus)), a wonderful Mac app for wrapping scripts in GUIs.
 
-![Demo Screenshot](media/opening_file.gif)
+<div align="center">
+    <img src="media/opening_file.gif" alt="Demo Animation" text-align="center">
+</div>
 
 ## Usage
 
@@ -32,6 +34,6 @@ Then click `Save As..`, provide a file name and directory, and click `Save`. You
 
 **TLDR: Run `./build.sh [--debug | --release]`**
 
-`build.sh` runs `cargo build --all`, then `./echidna/scripts/make-app.sh`, which builds `Echidna.app` (`target/{BUILD_MODE}/Echidna.app`), a Mac app bundle that includes `echidana` and `echidna-shim`.
+`build.sh` runs `cargo build --all`, then `scripts/make-app.sh`, which builds `Echidna.app` (in `target/{BUILD_MODE}/Echidna.app`), a Mac app bundle that includes `echidana` and `echidna-shim`.
 
 `cargo run` _should not_ be used, see `echidna-cli` above.
