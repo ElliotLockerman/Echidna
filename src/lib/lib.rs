@@ -18,32 +18,22 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array/>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.item</string>
-            </array>
-        </dict>
-    </array>
-
-    {{#if exts}}
-    <key>CFBundleDocumentTypes</key>
-    <array>
-        <dict>
+            {{#if exts}}
             <key>CFBundleTypeExtensions</key>
             <array>
             {{#each exts}}
                 <string>{{this}}</string>
             {{/each}}
             </array>
+            {{/if}}
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.item</string>
+            </array>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
         </dict>
     </array>
-    {{/if}}
 
 
     <key>CFBundleExecutable</key>
@@ -82,7 +72,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 "#;
 
-const SHIM_APP_ICON: &[u8] = include_bytes!("../app_files/ShimAppIcon.icns");
+const SHIM_APP_ICON: &[u8] = include_bytes!("../../app_files/ShimAppIcon.icns");
 
 
 pub enum GenErr {

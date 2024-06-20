@@ -5,18 +5,19 @@ edition = "2021"
 
 [[bin]]
 name = "echidna"
-path = "src/bin/app.rs"
+path = "src/app/app.rs"
 
 [[bin]]
 name = "echidna-cli"
-path = "src/bin/cli.rs"
+path = "src/cli/cli.rs"
 
 [[bin]]
 name = "echidna-shim"
-path = "src/bin/shim.rs"
+path = "src/shim/shim.rs"
 
 [lib]
 name = "echidna_lib"
+path = "src/lib/lib.rs"
 
 
 [dependencies]
