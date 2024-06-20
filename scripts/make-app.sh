@@ -39,6 +39,6 @@ mkdir "${APP_DIR}/Contents/Resources"
 
 cp "${TARGET_DIR}/echidna" "${APP_DIR}/Contents/MacOS/Echidna"
 cp "${REPO_DIR}/app_files/Info.plist" "${APP_DIR}/Contents/Info.plist"
-cp "${REPO_DIR}/app_files/icon.png" "${APP_DIR}/Contents/Resources/AppIcon.icns"
+cp "${REPO_DIR}/app_files/AppIcon.icns" "${APP_DIR}/Contents/Resources/AppIcon.icns"
 cp "${TARGET_DIR}/echidna-shim" "${APP_DIR}/Contents/Resources"
 
