@@ -113,6 +113,14 @@ macro_rules! os_cat {
     }};
 }
 
+// Extend an OsString
+macro_rules! os_extend {
+    ($os_string:ident, $($vals:expr),*) => {{
+        $os_string.reserve(sum_of_len!($($vals),*));
+        os_cat_rec!(&mut $os_string, $($vals),*);
+    }};
+}
+
 fn bash_quote<S: AsRef<OsStr>>(string: S) -> OsString {
     let string = string.as_ref();
     OsString::from_vec(Bash::quote(string))
@@ -163,10 +171,10 @@ impl AppDelegate for EchidnaShimDelegate {
 
         match self.config.group_open_by {
             GroupBy::All => {
-                cmd = os_cat!(&cmd, &self.config.command);
+                os_extend!(cmd, &self.config.command);
                 for path in paths {
                     let path = bash_quote(path);
-                    cmd = os_cat!(&cmd, " ", &path);
+                    os_extend!(cmd, " ", &path);
                 }
                 run_term_or_modal(&cmd);
             },
