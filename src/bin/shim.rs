@@ -73,51 +73,20 @@ fn modal<T: AsRef<str>, M: AsRef<str>>(title: T, msg: M) {
     Alert::new(title, msg).show();
 }
 
-macro_rules! sum_of_len_rec {
-    () => {{ 0 }};
-    ($acc:expr, $val:expr) => {{ *$acc += $val.len(); }};
-    ($acc:expr, $first:expr, $($rest:expr),+) => {{
-        *$acc += OsStr::new($first).len();
-        sum_of_len_rec!($acc, $($rest),+);
+// Extend an OsString with anything that implements AsRef<OsStr>.
+macro_rules! os_extend {
+    ($os_string:ident, $($vals:expr),*) => {{
+        $os_string.extend([$($vals.as_ref()),+]);
     }};
 }
 
-macro_rules! sum_of_len {
-    () => {{ sum_of_len_rec!() }};
-    ($($vals:expr),*) => {{
-        let mut sum = 0usize;
-        sum_of_len_rec!(&mut sum, $($vals),+);
-        sum
-    }};
-}
 
-macro_rules! os_cat_rec {
-    ($acc:expr) => {{
-    }};
-    ($acc:expr, $only:expr) => {{
-        $acc.push(OsStr::new($only));
-    }};
-    ($acc:expr, $first:expr, $($rest:expr),+) => {{
-        $acc.push(OsStr::new($first));
-        os_cat_rec!($acc, $($rest),+);
-    }};
-}
-
-// Concatenate OSStr (and anything that implements AsRef<OsStr>)
+// Concatenate anything that implements AsRef<OsStr> into an OsString.
 macro_rules! os_cat {
     ($($vals:expr),*) => {{
         let mut os_string = OsString::new();
-        os_string.reserve(sum_of_len!($($vals),*));
-        os_cat_rec!(&mut os_string, $($vals),*);
+        os_extend!(os_string, $($vals),+);
         os_string
-    }};
-}
-
-// Extend an OsString
-macro_rules! os_extend {
-    ($os_string:ident, $($vals:expr),*) => {{
-        $os_string.reserve(sum_of_len!($($vals),*));
-        os_cat_rec!(&mut $os_string, $($vals),*);
     }};
 }
 
@@ -171,7 +140,8 @@ impl AppDelegate for EchidnaShimDelegate {
 
         match self.config.group_open_by {
             GroupBy::All => {
-                os_extend!(cmd, &self.config.command);
+                // os_extend!(cmd, &self.config.command);
+                cmd.push(&self.config.command);
                 for path in paths {
                     let path = bash_quote(path);
                     os_extend!(cmd, " ", &path);
