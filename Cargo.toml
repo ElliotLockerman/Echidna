@@ -38,4 +38,6 @@ handlebars = "5.1.2"
 tempdir = "0.3.7"
 libc = "0.2.155"
 clap = { version = "4.5.7", features = ["derive"] }
+lazy_static = "1.4.0"
+maplit = "1.0.2"
 

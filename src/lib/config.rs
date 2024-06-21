@@ -32,6 +32,7 @@ impl fmt::Display for GroupBy {
 pub struct Config {
     pub command: String,
     pub group_open_by: GroupBy,
+    pub terminal: String,
 }
 
 fn ts<E: ToString>(e: E) -> String {
@@ -39,8 +40,8 @@ fn ts<E: ToString>(e: E) -> String {
 }
 
 impl Config {
-    pub fn new(command: String, group_open_by: GroupBy) -> Config {
-        Config{command, group_open_by}
+    pub fn new(command: String, group_open_by: GroupBy, terminal: String) -> Config {
+        Config{command, group_open_by, terminal}
     }
 
     pub fn load() -> Result<Config, String> {

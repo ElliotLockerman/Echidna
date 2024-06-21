@@ -2,6 +2,7 @@
 use echidna_lib::misc::get_app_resources;
 use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::{generate_shim_app, GenErr};
+use echidna_lib::term;
 
 use std::sync::Arc;
 use std::ffi::OsString;
@@ -26,6 +27,9 @@ struct EchidnaApp {
 
     previous_name: Option<OsString>, // Previous name chosen by Save As
     ident_ever_changed: bool,
+
+    #[default("Terminal.app".to_owned())]
+    terminal: String,
 }
 
 impl EchidnaApp {
@@ -54,7 +58,7 @@ impl EchidnaApp {
         };
         self.previous_name = app_path.file_name().map(|x| x.to_owned());
 
-        let config = Config::new(self.cmd.clone(), self.group_by);
+        let config = Config::new(self.cmd.clone(), self.group_by, self.terminal.clone());
         let shim_path = get_shim_path()?;
 
         let res = generate_shim_app(
@@ -189,6 +193,22 @@ impl eframe::App for EchidnaApp {
                     }
                 });
                 ui.end_row();
+
+                ui.end_row(); // Spacer
+
+                ui.label("Terminal:");
+                egui::ComboBox::from_id_source("Terminal Combo Box")
+                    .selected_text(&self.terminal)
+                    .show_ui(ui, |ui| {
+                    for terminal in term::supported_terminals() {
+                        if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
+                            self.terminal = terminal.to_owned();
+                        }
+                    }
+                });
+
+
+
 
             });
 

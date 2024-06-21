@@ -1,6 +1,7 @@
 
 pub mod config;
 pub mod misc;
+pub mod term;
 
 use crate::config::Config;
 

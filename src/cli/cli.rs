@@ -1,5 +1,6 @@
 
 use echidna_lib::config::{Config, GroupBy};
+use echidna_lib::term;
 
 use std::path::PathBuf;
 
@@ -28,6 +29,9 @@ struct Args {
 
     #[arg(long, short, action)]
     force: bool,
+
+    #[arg(long, default_value_t = String::from("Terminal.app"))]
+    terminal: String,
 }
 
 fn main() -> Result<(), String> {
@@ -37,7 +41,10 @@ fn main() -> Result<(), String> {
         .map(|x| x.clone()) // Just to make it the same type as the default, below.
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
-    let config = Config::new(args.command, args.group_open_by);
+    if !term::is_supported(&args.terminal) {
+        eprintln!("Terminal {} is not supported", args.terminal);
+    }
+    let config = Config::new(args.command, args.group_open_by, args.terminal);
 
     let shim_path = match args.shim_path {
         Some(x) => x.into(),

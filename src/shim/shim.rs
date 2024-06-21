@@ -1,11 +1,10 @@
 
 use echidna_lib::config::{Config, GroupBy};
+use echidna_lib::term;
 
-use std::process::{Command, Stdio};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 use std::os::unix::ffi::OsStringExt;
-use std::io::Write;
 
 use core::str::FromStr;
 
@@ -15,11 +14,6 @@ use log::{error, info};
 use std::env::VarError;
 use shell_quote::Bash;
 
-const JXA_RUN_BASH: &str = r#"
-    function run(argv) {
-        Application("Terminal").doScript(argv[0]);
-    }
-"#;
 
 fn init_log() {
     const LEVEL_KEY: &str = "ECH_SHIM_LOG_LEVEL";
@@ -105,6 +99,12 @@ impl EchidnaShimDelegate {
     fn new(config: Config) -> Self {
         Self{config}
     }
+
+    fn run_term(&self, bash: &OsStr) {
+        if let Err(e) = term::run_in_new_window(&self.config.terminal, &bash) {
+            modal("Error", format!("Error running `{bash:?}`: {e}"));
+        }
+    }
 }
 
 impl AppDelegate for EchidnaShimDelegate {
@@ -146,13 +146,13 @@ impl AppDelegate for EchidnaShimDelegate {
                     let path = bash_quote(path);
                     os_extend!(cmd, " ", &path);
                 }
-                run_term_or_modal(&cmd);
+                self.run_term(&cmd);
             },
             GroupBy::None => {
                 for path in paths {
                     let path = bash_quote(path);
                     let cmd2 = os_cat!(&cmd, &self.config.command, " ", &path);
-                    run_term_or_modal(&cmd2);
+                    self.run_term(&cmd2);
                 }
             }
         }
@@ -164,36 +164,7 @@ impl AppDelegate for EchidnaShimDelegate {
     }
 }
 
-fn run_term_or_modal(bash: &OsStr) {
-    if let Err(e) = run_term(&bash) {
-        modal("Error", format!("Error running `{bash:?}`: {e}"));
-    }
-}
 
-fn run_term(bash: &OsStr) -> Result<(), String> {
-    let cmd = "osascript";
-    let args = [OsStr::new("-lJavaScript"), OsStr::new("-"), bash];
-
-    let mut child = Command::new::<&OsStr>(cmd.as_ref())
-        .args(args)
-        .stdin(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| "Run error: ".to_owned() + e.to_string().as_str() + "\n")?;
-
-    /* scope to close stdin and unblock osascript */ {
-        let mut child_stdin = child.stdin.take().ok_or("Couldn't get child's stdin".to_owned())?;
-        child_stdin.write(JXA_RUN_BASH.as_bytes()).map_err(|e| format!("Couldn't write to child's stdin: {e}"))?;
-    }
-
-    let output = child.wait_with_output().map_err(|e| format!("Error waiting on child: {e}"))?;
-    if !output.status.success() {
-        let msg = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Command \"{msg}\" exited with with an error: {msg}\n"));
-    }
-
-    Ok(())
-}
 
 fn main() -> Result<(), String> {
     init_log();
