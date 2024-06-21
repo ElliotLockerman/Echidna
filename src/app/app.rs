@@ -24,9 +24,10 @@ struct EchidnaApp {
 
     #[default("com.yourdomain.YourAppName".to_owned())]
     identifier: String,
+    ident_ever_changed: bool, // Disables setting default based on cmd
 
+    default_file_name: String,
     previous_name: Option<OsString>, // Previous name chosen by Save As
-    ident_ever_changed: bool,
 
     #[default("Terminal.app".to_owned())]
     terminal: String,
@@ -46,13 +47,16 @@ impl EchidnaApp {
             return Err("Identifier must not be empty".to_string());
         }
 
-        let mut dialog = FileDialog::new();
-        if let Some(name) = &self.previous_name {
-            // Shame to have to use to_string_lossy(), everwhere else, the filename is
-            // an OsStr(ing). At least here the user has the chance  to fix it if it
-            // gets mangled.
-            dialog = dialog.set_file_name(name.to_string_lossy());
-        }
+        // Shame to have to use to_string_lossy(), everwhere else, the filename is
+        // an OsStr(ing). At least here the user has the chance  to fix it if it
+        // gets mangled.
+        let dialog = FileDialog::new()
+            .set_file_name(
+                self.previous_name.as_ref()
+                    .map(|x| x.to_string_lossy().to_string())
+                    .unwrap_or(self.default_file_name.clone())
+            );
+
         let Some(app_path) = dialog.save_file() else {
             return Ok(());
         };
@@ -129,9 +133,7 @@ impl EchidnaApp {
         }
     }
 
-    fn update_default_ident(&mut self) {
-        self.identifier.clear();
-        self.identifier += "com.yourdomain.";
+    fn update_default_file_name(&mut self) {
 
         let word = self.cmd.split_whitespace().next();
         let word = match word {
@@ -146,24 +148,29 @@ impl EchidnaApp {
         let mut first = chars.next().expect("SplitWhitespace returned an empty string!?");
         first.make_ascii_uppercase();
 
-        self.identifier.push(first);
-        self.identifier.extend(chars);
-        self.identifier += "Opener";
+        self.default_file_name.clear();
+        self.default_file_name.push(first);
+        self.default_file_name.extend(chars);
+        self.default_file_name += "Opener";
+    }
+
+    fn update_default_ident(&mut self) {
+        self.identifier.clear();
+        self.identifier += "com.yourdomain.";
+        self.identifier += &self.default_file_name;
     }
 
 }
 
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let mut cmd_changed = false;
-
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("Execution").num_columns(2).show(ui, |ui| {
                 ui.label("Command:");
                 ui.centered_and_justified(|ui| {
                     let cmd = egui::TextEdit::singleline(&mut self.cmd);
                     if ui.add(cmd).changed() {
-                        cmd_changed = true;
+                        self.update_default_file_name();
                     }
                 });
                 ui.end_row();
@@ -178,7 +185,7 @@ impl eframe::App for EchidnaApp {
 
                 ui.label("Identifier:");
                 ui.centered_and_justified(|ui| {
-                    if cmd_changed && !self.ident_ever_changed {
+                    if !self.ident_ever_changed {
                         self.update_default_ident();
                     }
                     if ui.text_edit_singleline(&mut self.identifier).changed() {
