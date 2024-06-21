@@ -14,10 +14,11 @@ Echidna is a Mac app for generating "shim applications" that allow opening files
 
 After launching Echidna, first fill out the fields:
 
-- **Command**: The terminal program to execute. The files, space-delimited, will be appended to this string and passed to the terminal. Only Bash-compatible commands are supported at the moment (due to the quoting required for the command and passed file paths).
-- **Extensions**: Optionally add extensions for the shim app to support. Adding extensions makes your shim app appear in the `Open With` menu for files with supported extensions, but will prevent files with other extensions from being dragged to your shim app. Files with other extensions can still be opened by double-clicking if your shim app is selected in the `Open With` -> `Other...` dialog (You may have to select `All Applications` in the `Enable` drop-down)
-- **Open Files: () Together, () Individually**: If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
+- **Command:** The terminal program to execute. The files, space-delimited, will be appended to this string and passed to the terminal. Only Bash-compatible commands are supported at the moment (due to the quoting required for the command and passed file paths).
+- **Extensions:** Optionally add extensions for the shim app to support. Adding extensions makes your shim app appear in the `Open With` menu for files with supported extensions, but will prevent files with other extensions from being dragged to your shim app. Files with other extensions can still be opened by double-clicking if your shim app is selected in the `Open With` -> `Other...` dialog (You may have to select `All Applications` in the `Enable` drop-down)
 - **Identifier**: The bundle identifier for the shim app. This can be any unique string, but is usually a reverse URL withe app name as the final component.
+- **Terminal:** Select desired terminal application. Currently supported are Terminal.app and iTerm2.
+- **Open Files: () Together, () Individually:** If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window?
 
 Then click `Save As..`, provide a file name and directory, and click `Save`. You can then set your shim app as the `Open With` handler, or launch it to provide a draggable target in the dock bar (no windows will appear after being launched, and launching isn't necessary for other use pattern).
 

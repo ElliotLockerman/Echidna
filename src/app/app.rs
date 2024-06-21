@@ -176,13 +176,6 @@ impl eframe::App for EchidnaApp {
                 });
                 ui.end_row();
 
-                ui.label("Open Files:");
-                ui.horizontal(|ui| {
-                    ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
-                    ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
-                });
-                ui.end_row();
-
                 ui.label("Identifier:");
                 ui.centered_and_justified(|ui| {
                     if cmd_changed && !self.ident_ever_changed {
@@ -206,6 +199,14 @@ impl eframe::App for EchidnaApp {
                         }
                     }
                 });
+                ui.end_row();
+
+                ui.label("Open Files:");
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
+                    ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
+                });
+                ui.end_row();
 
 
 
