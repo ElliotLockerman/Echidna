@@ -71,7 +71,11 @@ mod terminal_dot_app {
 
     const JXA_RUN: &str = r#"
         function run(argv) {
-            Application("Terminal").doScript(argv[0]);
+            let app = Application("Terminal");
+            if (!app.running()) {
+                app.activate();
+            }
+            app.doScript(argv[0]);
         }
     "#;
 
@@ -87,6 +91,9 @@ mod iterm {
     const JXA_RUN: &str = r#"
         function run(argv) {
             let app = Application("iTerm");
+            if (!app.running()) {
+                app.activate();
+            }
             let window = app.createWindowWithDefaultProfile({});
             window.currentSession().write({"text": argv[0]});
 
