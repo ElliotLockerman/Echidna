@@ -89,7 +89,7 @@ impl GenErr {
                     format!("App already exists at '{}'. Run with [-f|--force] to overwrite.",
                     app_dst_path.display()
                 ),
-            GenErr::Other(msg) => format!("{msg}"),
+            GenErr::Other(msg) => msg.to_owned(),
         }
     }
 }
@@ -202,14 +202,13 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     let mut saved_bundle = None;
     if overwrite && dst_bundle.exists() && dst_bundle.file_name() == tmp_bundle.file_name() {
         let saved_bundle_inner = tmp_bundle.with_extension("bak");
-        match fs::rename(&dst_bundle, &saved_bundle_inner) {
-            Ok(()) => { saved_bundle = Some(saved_bundle_inner); },
-            Err(_) =>  (),
-        }
+        if let Ok(()) = fs::rename(dst_bundle, &saved_bundle_inner) {
+            saved_bundle = Some(saved_bundle_inner);
+        } // No else, best effort.
     }
 
     // The actual rename
-    let res = fs::rename(&tmp_bundle, &dst_bundle).map_err(|e| {
+    let res = fs::rename(tmp_bundle, dst_bundle).map_err(|e| {
         match e.raw_os_error() {
             Some(libc::ENOTEMPTY) => GenErr::AppAlreadyExists, // ErrorKind::DirectoryNotEmpty not available on stable
             Some(_) | None => gen_err_other!(
@@ -221,8 +220,10 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     });
 
     if res.is_err() && saved_bundle.is_some() {
-        // Best effort.
-        let _ = fs::rename(&saved_bundle.unwrap(), &dst_bundle);
+        if let Some(saved) = saved_bundle {
+            // Best effort.
+            let _ = fs::rename(saved, dst_bundle);
+        }
     }
 
     res

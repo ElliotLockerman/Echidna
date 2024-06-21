@@ -38,7 +38,6 @@ fn main() -> Result<(), String> {
     let args = Args::parse();
 
     let identifier = args.identifier
-        .map(|x| x.clone()) // Just to make it the same type as the default, below.
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
     if !term::is_supported(&args.terminal) {

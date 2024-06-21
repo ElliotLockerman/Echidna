@@ -133,7 +133,7 @@ impl EchidnaApp {
         self.identifier.clear();
         self.identifier += "com.yourdomain.";
 
-        let word = self.cmd.trim().split_whitespace().next();
+        let word = self.cmd.split_whitespace().next();
         let word = match word {
             Some(x) => x,
             None => {
@@ -202,7 +202,7 @@ impl eframe::App for EchidnaApp {
                     .show_ui(ui, |ui| {
                     for terminal in term::supported_terminals() {
                         if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
-                            self.terminal = terminal.to_owned();
+                             terminal.clone_into(&mut self.terminal);
                         }
                     }
                 });
@@ -257,7 +257,7 @@ fn get_shim_path() -> Result<PathBuf, String> {
     }
 
     // TODO: argument or environment variable for non-standard uses.
-    return Err("Can't find echidna-shim executable".to_owned());
+    Err("Can't find echidna-shim executable".to_owned())
 }
 
 

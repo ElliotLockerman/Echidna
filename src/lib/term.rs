@@ -69,7 +69,7 @@ fn run_jxa(jxa: &OsStr, arg: &OsStr) -> JxaResult {
 mod terminal_dot_app {
     use std::ffi::OsStr;
 
-    const JXA_RUN: &'static str = r#"
+    const JXA_RUN: &str = r#"
         function run(argv) {
             Application("Terminal").doScript(argv[0]);
         }
@@ -84,7 +84,7 @@ mod terminal_dot_app {
 mod iterm {
     use std::ffi::OsStr;
 
-    const JXA_RUN: &'static str = r#"
+    const JXA_RUN: &str = r#"
         function run(argv) {
             let app = Application("iTerm");
             let window = app.createWindowWithDefaultProfile({});
