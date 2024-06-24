@@ -101,7 +101,7 @@ impl EchidnaShimDelegate {
     }
 
     fn run_term(&self, bash: &OsStr) {
-        if let Err(e) = term::run_in_new_window(&self.config.terminal, bash) {
+        if let Err(e) = term::run_in_new_window(&self.config, bash) {
             modal("Error", format!("Error running `{bash:?}`: {e}"));
         }
     }

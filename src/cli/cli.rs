@@ -1,5 +1,5 @@
 
-use echidna_lib::config::{Config, GroupBy};
+use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::term;
 
 use std::path::PathBuf;
@@ -30,8 +30,11 @@ struct Args {
     #[arg(long, short, action)]
     force: bool,
 
-    #[arg(long, default_value_t = String::from("Terminal.app"))]
-    terminal: String,
+    #[arg(long)]
+    terminal: Option<String>,
+
+    #[arg(long)]
+    generic_terminal: Option<String>,
 }
 
 fn main() -> Result<(), String> {
@@ -40,10 +43,26 @@ fn main() -> Result<(), String> {
     let identifier = args.identifier
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
-    if !term::is_supported(&args.terminal) {
-        eprintln!("Terminal {} is not supported", args.terminal);
+    if args.terminal.is_some() && args.generic_terminal.is_some() {
+        return Err(format!("Only one of --terminal and --generic-terminal may be passed"));
     }
-    let config = Config::new(args.command, args.group_open_by, args.terminal);
+
+    let terminal = if let Some(term) = args.generic_terminal {
+        TerminalApp::Generic(term.to_owned())
+    } else if let Some(term) = &args.terminal {
+        if !term::is_supported(term) {
+            return Err(format!("Terminal {} is not supported, but you can try it with --generic-terminal", term));
+        }
+        TerminalApp::Supported(term.to_owned())
+    } else {
+        TerminalApp::Supported("Terminal.app".to_owned())
+    };
+
+    let config = Config{
+        command: args.command,
+        group_open_by: args.group_open_by,
+        terminal,
+    };
 
     let shim_path = match args.shim_path {
         Some(x) => x.into(),
