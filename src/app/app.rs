@@ -1,9 +1,8 @@
 
-use echidna_lib::misc::get_app_resources;
+use echidna_lib::misc::{get_app_resources, DEFAULT_UTIS};
 use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::{generate_shim_app, GenErr};
-use echidna_lib::term;
-use echidna_lib::{bail, bailf};
+use echidna_lib::{term, bail, bailf};
 
 use std::sync::Arc;
 use std::ffi::OsString;
@@ -12,7 +11,6 @@ use std::path::PathBuf;
 use eframe::egui;
 use egui::viewport::IconData;
 use rfd::FileDialog;
-use egui::TextEdit;
 
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 200.0);
 const SECTION_PADDING: f32 = 15.0;
@@ -20,11 +18,14 @@ const SECTION_PADDING: f32 = 15.0;
 #[derive(better_default::Default)]
 struct EchidnaApp {
     cmd: String,
-    exts: String,
+
+    #[default(DEFAULT_UTIS.to_string())]
+    utis: String,
+
     group_by: GroupBy,
 
-    #[default("com.yourdomain.YourAppName".to_owned())]
-    identifier: String,
+    #[default("com.example.YourAppName".to_owned())]
+    bundle_id: String,
     ident_ever_changed: bool, // Disables setting default based on cmd
 
     default_file_name: String,
@@ -44,8 +45,8 @@ impl EchidnaApp {
             bail!("Command must not be empty".to_string());
         }
 
-        if self.identifier.is_empty() {
-            bail!("Identifier must not be empty".to_string());
+        if self.bundle_id.is_empty() {
+            bail!("Bundle Identifier must not be empty".to_string());
         }
 
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -68,8 +69,8 @@ impl EchidnaApp {
 
         let res = generate_shim_app(
             &config,
-            self.exts.clone(),
-            &self.identifier,
+            self.utis.clone(),
+            &self.bundle_id,
             &shim_path,
             app_path.clone(),
             false,
@@ -104,8 +105,8 @@ impl EchidnaApp {
 
         let res = generate_shim_app(
             &config,
-            self.exts.clone(),
-            &self.identifier,
+            self.utis.clone(),
+            &self.bundle_id,
             &shim_path,
             app_path.clone(),
             true,
@@ -138,7 +139,7 @@ impl EchidnaApp {
         let word = match word {
             Some(x) => x,
             None => {
-                self.identifier += "YourAppName";
+                self.bundle_id += "YourAppName";
                 return;
             },
         };
@@ -154,9 +155,9 @@ impl EchidnaApp {
     }
 
     fn update_default_ident(&mut self) {
-        self.identifier.clear();
-        self.identifier += "com.yourdomain.";
-        self.identifier += &self.default_file_name;
+        self.bundle_id.clear();
+        self.bundle_id += "com.yourdomain.";
+        self.bundle_id += &self.default_file_name;
     }
 
 }
@@ -174,20 +175,18 @@ impl eframe::App for EchidnaApp {
                 });
                 ui.end_row();
 
-                ui.label("Extensions:");
+                ui.label("Uniform Type Identifiers:");
                 ui.centered_and_justified(|ui| {
-                    let exts = TextEdit::singleline(&mut self.exts)
-                        .hint_text("Optional; see Readme");
-                    ui.add(exts);
+                    ui.text_edit_singleline(&mut self.utis);
                 });
                 ui.end_row();
 
-                ui.label("Identifier:");
+                ui.label("Bundle Identifier:");
                 ui.centered_and_justified(|ui| {
                     if !self.ident_ever_changed {
                         self.update_default_ident();
                     }
-                    if ui.text_edit_singleline(&mut self.identifier).changed() {
+                    if ui.text_edit_singleline(&mut self.bundle_id).changed() {
                         self.ident_ever_changed = true;
                     }
                 });
@@ -250,7 +249,7 @@ fn get_shim_path() -> Result<PathBuf, String> {
     // will be right there.
     let shim_path = {
         let mut path = std::env::current_exe()
-            .map_err(|e| format!("Failed to get current ext: {e}"))?;
+            .map_err(|e| format!("Failed to get current exe: {e}"))?;
 
         if !path.pop() {
             bailf!("Couldn't pop binary filename from path '{}' !?", shim_path.display());

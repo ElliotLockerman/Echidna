@@ -1,7 +1,7 @@
 
 use echidna_lib::config::{Config, GroupBy};
-use echidna_lib::term;
-use echidna_lib::bailf;
+use echidna_lib::{term, bailf};
+use echidna_lib::misc::DEFAULT_UTIS;
 
 use std::path::PathBuf;
 
@@ -13,8 +13,8 @@ struct Args {
 
     out_path: PathBuf,
 
-    #[arg(long, default_value_t = String::from(""))]
-    exts: String,
+    #[arg(long, default_value_t = String::from(DEFAULT_UTIS))]
+    utis: String,
 
     #[arg(long, default_value_t = Default::default())]
     group_open_by: GroupBy,
@@ -50,7 +50,7 @@ fn main() -> Result<(), String> {
         Some(x) => x.into(),
         None => {
             let mut path = std::env::current_exe()
-                .map_err(|e| format!("Failed to get current ext: {e}"))?;
+                .map_err(|e| format!("Failed to get current exe: {e}"))?;
             if !path.pop() {
                 bailf!("Couldn't pop binary filename from path '{}' !?", path.display());
             }
@@ -65,7 +65,7 @@ fn main() -> Result<(), String> {
 
     echidna_lib::generate_shim_app(
         &config,
-        args.exts,
+        args.utis,
         &identifier,
         &shim_path,
         args.out_path.clone(),

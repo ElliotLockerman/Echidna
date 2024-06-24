@@ -1,6 +1,8 @@
 
 use std::path::PathBuf;
 
+pub const DEFAULT_UTIS: &str = "public.text";
+
 #[macro_export]
 macro_rules! bail {
     ($e:expr) => {{
@@ -18,7 +20,7 @@ macro_rules! bailf {
 // Get the path to the currently executing app bundle's Resources directory.
 pub fn get_app_resources() -> Result<PathBuf, String> {
     let mut path = std::env::current_exe()
-        .map_err(|e| format!("Failed to get current ext: {e}"))?;
+        .map_err(|e| format!("Failed to get current exe: {e}"))?;
 
     // Binary itself
     if !path.pop() {

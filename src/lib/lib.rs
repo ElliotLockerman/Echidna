@@ -19,18 +19,16 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
-            {{#if exts}}
-            <key>CFBundleTypeExtensions</key>
-            <array>
-            {{#each exts}}
-                <string>{{this}}</string>
-            {{/each}}
-            </array>
-            {{/if}}
+
+            {{#if utis}}
             <key>LSItemContentTypes</key>
             <array>
-                <string>public.item</string>
+                {{#each utis}}
+                <string>{{this}}</string>
+                {{/each}}
             </array>
+            {{/if}}
+
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
         </dict>
@@ -44,7 +42,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <string>AppIcon.icns</string>
 
     <key>CFBundleIdentifier</key>
-    <string>{{identifier}}</string>
+    <string>{{bundle_id}}</string>
 
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
@@ -112,8 +110,8 @@ fn write_shim_bin(mac_os: &Path, app_name: &OsStr, shim_bin: &Path) -> Result<()
     Ok(())
 }
 
-fn parse_exts(exts: &str) -> Vec<String> {
-    exts.split(',')
+fn parse_utis(utis: &str) -> Vec<String> {
+    utis.split(',')
         .map(|x| x.trim().trim_start_matches('.').to_owned())
         .filter(|x| !x.is_empty())
         .collect::<Vec<_>>()
@@ -122,19 +120,19 @@ fn parse_exts(exts: &str) -> Vec<String> {
 fn write_info_plist(
     contents: &Path,
     app_name: &str,
-    exts: &str,
-    identifier: &str,
+    utis: &str,
+    bundle_id: &str,
 ) -> Result<(), GenErr> {
 
-    let extsv = parse_exts(exts);
+    let utisv = parse_utis(utis);
 
     let reg = handlebars::Handlebars::new();
     let rendered = reg.render_template(
         INFO_PLIST_TEMPLATE,
         &serde_json::json!({
             "app_display_name": app_name,
-            "exts": extsv,
-            "identifier": identifier,
+            "utis": utisv,
+            "bundle_id": bundle_id,
         }),
     ).map_err(|e| gen_err_other!("Error rendering Info.plist template: {e}"))?;
 
@@ -231,12 +229,12 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// exts is a comma-delimited list of extensions to support.
+// utis is a comma-delimited list of Uniform Type Identifiers to support.
 // Returns path to app bundle on success.
 pub fn generate_shim_app(
     config: &Config,
-    exts: String,
-    identifier: &str,
+    utis: String,
+    bundle_id: &str,
     shim_bin: &Path,
     app_path: PathBuf,
     overwrite: bool
@@ -277,8 +275,8 @@ pub fn generate_shim_app(
     write_info_plist(
         &contents,
         &app_name.to_string_lossy(),
-        &exts,
-        identifier,
+        &utis,
+        bundle_id,
     )?;
     write_shim_bin(&mac_os, &app_name, shim_bin)?;
     config.write(&resources).map_err(|e| gen_err_other!("{e}"))?;
