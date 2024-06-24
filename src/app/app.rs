@@ -3,6 +3,7 @@ use echidna_lib::misc::get_app_resources;
 use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::{generate_shim_app, GenErr};
 use echidna_lib::term;
+use echidna_lib::{bail, bailf};
 
 use std::sync::Arc;
 use std::ffi::OsString;
@@ -40,11 +41,11 @@ impl EchidnaApp {
     
     fn generate_inner(&mut self) -> Result<(), String> {
         if self.cmd.is_empty() {
-            return Err("Command must not be empty".to_string());
+            bail!("Command must not be empty".to_string());
         }
 
         if self.identifier.is_empty() {
-            return Err("Identifier must not be empty".to_string());
+            bail!("Identifier must not be empty".to_string());
         }
 
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -83,7 +84,7 @@ impl EchidnaApp {
             },
             Err(err) => match err {
                 GenErr::Other(msg) => {
-                    return Err(msg);
+                    bail!(msg);
                 },
                 GenErr::AppAlreadyExists => (),
             }
@@ -112,11 +113,9 @@ impl EchidnaApp {
 
         let final_path = match res {
             Ok(x) => x,
-            Err(GenErr::Other(msg)) => {
-                return Err(msg);
-            },
+            Err(GenErr::Other(msg)) => bail!(msg),
             Err(GenErr::AppAlreadyExists) => {
-                return Err(format!("Still couldn't write destination '{}'", app_path.display()));
+                bailf!("Still couldn't write destination '{}'", app_path.display());
             },
         };
 
@@ -254,7 +253,7 @@ fn get_shim_path() -> Result<PathBuf, String> {
             .map_err(|e| format!("Failed to get current ext: {e}"))?;
 
         if !path.pop() {
-            return Err(format!("Couldn't pop binary filename from path '{}' !?", shim_path.display()));
+            bailf!("Couldn't pop binary filename from path '{}' !?", shim_path.display());
         }
         path.push("echidna-shim");
         path

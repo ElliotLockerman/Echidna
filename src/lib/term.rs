@@ -1,4 +1,6 @@
 
+use crate::bailf;
+
 use std::process::{Command, Stdio};
 use std::io::Write;
 use std::ffi::OsStr;
@@ -55,7 +57,7 @@ fn run_jxa(jxa: &OsStr, arg: &OsStr) -> JxaResult {
     let output = child.wait_with_output().map_err(|e| format!("Error waiting on child: {e}"))?;
     if !output.status.success() {
         let msg = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Command \"{msg}\" exited with with an error: {msg}\n"));
+        bailf!("Command \"{msg}\" exited with with an error: {msg}\n");
     }
 
     Ok(())

@@ -1,6 +1,7 @@
 
 use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::term;
+use echidna_lib::bailf;
 
 use std::path::PathBuf;
 
@@ -51,7 +52,7 @@ fn main() -> Result<(), String> {
             let mut path = std::env::current_exe()
                 .map_err(|e| format!("Failed to get current ext: {e}"))?;
             if !path.pop() {
-                return Err(format!("Couldn't pop binary filename from path '{}' !?", path.display()));
+                bailf!("Couldn't pop binary filename from path '{}' !?", path.display());
             }
             path.push("echidna-shim");
             path
@@ -59,7 +60,7 @@ fn main() -> Result<(), String> {
     };
 
     if !shim_path.exists() {
-        return Err(format!("Couldn't find shim executable at '{}'", shim_path.display()));
+        bailf!("Couldn't find shim executable at '{}'", shim_path.display());
     }
 
     echidna_lib::generate_shim_app(

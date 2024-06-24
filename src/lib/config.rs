@@ -1,4 +1,6 @@
 
+use crate::bail;
+
 use std::fmt;
 use std::fs;
 use std::path::Path;
@@ -52,7 +54,7 @@ impl Config {
 
         let conf: Config = serde_json::from_str(&conf_str).map_err(ts)?;
         if conf.command.is_empty() {
-            return Err("Config's 'command' field may not be empty".to_owned());
+            bail!("Config's 'command' field may not be empty".to_owned());
         }
 
         Ok(conf)

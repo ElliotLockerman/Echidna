@@ -1,6 +1,7 @@
 
 use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::term;
+use echidna_lib::bail;
 
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
@@ -173,7 +174,7 @@ fn main() -> Result<(), String> {
         Ok(x) => x,
         Err(msg) => {
             modal("Error loading config", &msg);
-            return Err(msg);
+            bail!(msg);
         },
     };
 
