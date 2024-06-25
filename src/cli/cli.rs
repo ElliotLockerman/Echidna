@@ -1,8 +1,8 @@
 
 use echidna_lib::{term, bailf};
-use echidna_lib::config::{Config, GroupBy};
-use echidna_lib::misc::DEFAULT_UTIS;
+use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::generate::generate_shim_app;
+use echidna_lib::misc::DEFAULT_UTIS;
 
 use std::path::PathBuf;
 
@@ -38,14 +38,18 @@ struct Args {
     #[arg(long, short, action)]
     force: bool,
 
-    /// Terminal app to open in.
+    /// Terminal app to open in. Mutually exclusive with --generic-terminal.
     #[arg(
         long,
-        default_value = term::default_terminal(),
         help = String::from("Terminal app in which to open. Supported: ")
             + term::supported_terminals_string().as_str()
     )]
-    terminal: String,
+    terminal: Option<String>,
+
+    /// An unsupported terminal to (attempt) to use by sending keystrokes. Mutually exclusive with
+    /// --terminal.
+    #[arg(long)]
+    generic_terminal: Option<String>,
 }
 
 fn main() -> Result<(), String> {
@@ -54,14 +58,30 @@ fn main() -> Result<(), String> {
     let bundle_id = args.bundle_id
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
-    if !term::is_supported(&args.terminal) {
-        eprintln!(
-            "Terminal {} is not supported. Supported: {}",
-            args.terminal,
-            term::supported_terminals_string(),
-        );
+    if args.terminal.is_some() && args.generic_terminal.is_some() {
+        return Err(format!("Only one of --terminal and --generic-terminal may be passed"));
     }
-    let config = Config::new(args.command, args.group_open_by, args.terminal);
+
+    let terminal = if let Some(term) = args.generic_terminal {
+        TerminalApp::Generic(term.to_owned())
+    } else if let Some(term) = &args.terminal {
+        if !term::is_supported(term) {
+            return Err(format!(
+                "Terminal {} is not supported (supported terminals: {}), but you can try it with --generic-terminal", 
+                term,
+                term::supported_terminals_string(),
+            ));
+        }
+        TerminalApp::Supported(term.to_owned())
+    } else {
+        TerminalApp::Supported("Terminal.app".to_owned())
+    };
+
+    let config = Config{
+        command: args.command,
+        group_open_by: args.group_open_by,
+        terminal,
+    };
 
     let shim_path = match args.shim_path {
         Some(x) => x.into(),

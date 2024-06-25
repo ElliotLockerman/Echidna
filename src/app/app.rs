@@ -1,6 +1,6 @@
 
 use echidna_lib::misc::{get_app_resources, DEFAULT_UTIS};
-use echidna_lib::config::{Config, GroupBy};
+use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::generate::{generate_shim_app, GenErr};
 use echidna_lib::{term, bail, bailf};
 
@@ -19,6 +19,10 @@ use egui_commonmark::{CommonMarkCache, commonmark_str};
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const SECTION_PADDING: f32 = 15.0;
+
+// Special value for terminal EchidnaApp::terminal indicating generic. Obviously, using the TerminalApp
+// enum would be better, but it doesn't seem compatibel with egui.
+const GENERIC: &str = "Generic";
 
 #[derive(better_default::Default)]
 struct EchidnaApp {
@@ -41,6 +45,9 @@ struct EchidnaApp {
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
+
+    #[default("".to_owned())]
+    generic_terminal: String,
 }
 
 impl EchidnaApp {
@@ -51,6 +58,10 @@ impl EchidnaApp {
     fn generate_inner(&mut self) -> Result<(), String> {
         if self.cmd.is_empty() {
             bail!("Command must not be empty".to_string());
+        }
+
+        if self.terminal == GENERIC && self.generic_terminal.is_empty() {
+            return Err("Generic terminal must not be empty".to_string());
         }
 
         if self.bundle_id.is_empty() {
@@ -72,7 +83,16 @@ impl EchidnaApp {
         };
         self.previous_name = app_path.file_name().map(|x| x.to_owned());
 
-        let config = Config::new(self.cmd.clone(), self.group_by, self.terminal.clone());
+        let terminal = if self.terminal == GENERIC {
+            TerminalApp::Generic(self.generic_terminal.clone())
+        } else {
+            TerminalApp::Supported(self.terminal.clone())
+        };
+        let config = Config{
+            command: self.cmd.clone(),
+            group_open_by: self.group_by,
+            terminal,
+        };
         let shim_path = get_shim_path()?;
 
         let res = generate_shim_app(
@@ -227,13 +247,27 @@ impl eframe::App for EchidnaApp {
                 ui.end_row(); // Spacer
 
                 ui.label("Terminal:");
-                egui::ComboBox::from_id_source("Terminal Combo Box")
-                    .selected_text(&self.terminal)
-                    .show_ui(ui, |ui| {
-                    for terminal in term::supported_terminals() {
-                        if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
-                             terminal.clone_into(&mut self.terminal);
-                        }
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_source("Terminal Combo Box")
+                        .selected_text(&self.terminal)
+                        .show_ui(ui, |ui| {
+                            for terminal in term::supported_terminals() {
+                                assert!(terminal != GENERIC);
+                                if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
+                                     terminal.clone_into(&mut self.terminal);
+                                }
+                            }
+
+                            if ui.selectable_label(self.terminal == GENERIC, GENERIC).clicked() {
+                                GENERIC.clone_into(&mut self.terminal);
+                            }
+                    });
+
+
+                    if self.terminal == GENERIC {
+                        let generic = egui::TextEdit::singleline(&mut self.generic_terminal)
+                            .hint_text("Terminal App Name");
+                        ui.add(generic);
                     }
                 });
                 ui.end_row();

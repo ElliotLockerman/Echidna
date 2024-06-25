@@ -1,5 +1,6 @@
 
 use crate::bailf;
+use crate::config::{Config, TerminalApp};
 
 use std::process::{Command, Stdio};
 use std::io::Write;
@@ -9,7 +10,7 @@ use std::os::unix::ffi::OsStrExt;
 use lazy_static::lazy_static;
 use indexmap::{IndexMap,indexmap};
 
-type RunInNewWindow = fn(bash: &OsStr) -> Result<(), String>;
+type RunInNewWindow = fn(config: &Config, bash: &OsStr) -> Result<(), String>;
 
 lazy_static! {
     // TERMINALS and TERM_ORDER must have exactly the same keys!!!
@@ -19,11 +20,15 @@ lazy_static! {
     };
 }
 
-
-pub fn run_in_new_window(terminal: &str, bash: &OsStr) -> Result<(), String> {
-    match TERMINALS.get(terminal) {
-        Some(t) => t(bash),
-        None => Err(format!("Terminal '{terminal}' is not supported")),
+pub fn run_in_new_window(config: &Config, bash: &OsStr) -> Result<(), String> {
+    match &config.terminal {
+        TerminalApp::Supported(name) => {
+            match TERMINALS.get(&*name) {
+                Some(fun) => fun(config, bash),
+                None => Err(format!("Terminal {} is not supported", &config.terminal.name())),
+            }
+        },
+        TerminalApp::Generic(_) => generic::run_in_new_window(config, bash),
     }
 }
 
@@ -47,9 +52,9 @@ pub fn is_supported(terminal: &str) -> bool {
 
 type JxaResult = Result<(), String>;
 
-fn run_jxa(jxa: &OsStr, arg: &OsStr) -> JxaResult {
+fn run_jxa(jxa: &OsStr, term: &OsStr, arg: &OsStr) -> JxaResult {
     let cmd = "osascript";
-    let args = [OsStr::new("-lJavaScript"), OsStr::new("-"), arg];
+    let args = [OsStr::new("-lJavaScript"), OsStr::new("-"), term, arg];
 
     let mut child = Command::new::<&OsStr>(cmd.as_ref())
         .args(args)
@@ -79,41 +84,84 @@ fn run_jxa(jxa: &OsStr, arg: &OsStr) -> JxaResult {
 // MacOS's built-in terminal
 mod terminal_dot_app {
     use std::ffi::OsStr;
+    use crate::config::Config;
 
     const JXA_RUN: &str = r#"
         function run(argv) {
+            if (argv.length !== 2) {
+                console.log("Expected exactly 2 arguments");
+                return;
+            }
+
             let app = Application("Terminal");
             if (!app.running()) {
                 app.activate();
             }
-            app.doScript(argv[0]);
+            app.doScript(argv[1]);
         }
     "#;
 
-    pub fn run_in_new_window(script: &OsStr) -> Result<(), String> {
-        super::run_jxa(OsStr::new(JXA_RUN), script)
+    pub fn run_in_new_window(_: &Config, script: &OsStr) -> Result<(), String> {
+        super::run_jxa(OsStr::new(JXA_RUN), OsStr::new(""), script)
     }
 }
 
 // iTerm2
 mod iterm {
     use std::ffi::OsStr;
+    use crate::config::Config;
 
     const JXA_RUN: &str = r#"
         function run(argv) {
+            if (argv.length !== 2) {
+                console.log("Expected exactly 2 arguments");
+                return;
+            }
+
             let app = Application("iTerm");
             if (!app.running()) {
                 app.activate();
             }
             let window = app.createWindowWithDefaultProfile({});
-            window.currentSession().write({"text": argv[0]});
+            window.currentSession().write({"text": argv[1]});
 
         }
     "#;
 
-    pub fn run_in_new_window(script: &OsStr) -> Result<(), String> {
-        super::run_jxa(OsStr::new(JXA_RUN), script)
+    pub fn run_in_new_window(_: &Config, script: &OsStr) -> Result<(), String> {
+        super::run_jxa(OsStr::new(JXA_RUN), OsStr::new(""), script)
     }
 }
 
+mod generic {
+    use std::ffi::OsStr;
+    use crate::config::Config;
+
+    const JXA_RUN: &str = r#"
+    function run(argv) {
+        if (argv.length !== 2) {
+            console.log("Expected exactly 2 arguments");
+            return;
+        }
+
+        let app = Application(argv[0]);
+        let was_running = app.running();
+        app.activate();
+
+        let events = Application("System Events");
+        if (was_running) {
+            events.keystroke("n", {"using": "command down"});
+        }
+        delay(0.25);
+        events.keystroke(argv[1]);
+    }
+    "#;
+
+    pub fn run_in_new_window(config: &Config, script: &OsStr) -> Result<(), String> {
+        // Assuming OsStr(ing) is backwards-compatible with ascii...
+        let mut script = script.to_owned();
+        script.push("\n");
+        super::run_jxa(OsStr::new(JXA_RUN), OsStr::new(config.terminal.name()), &script)
+    }
+}
 

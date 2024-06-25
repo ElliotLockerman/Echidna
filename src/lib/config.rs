@@ -5,8 +5,8 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
-use serde::{Serialize, Deserialize};
 use clap::ValueEnum;
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum GroupBy {
@@ -17,6 +17,21 @@ pub enum GroupBy {
 impl Default for GroupBy {
     fn default() -> Self {
         Self::All
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum TerminalApp {
+    Supported(String),
+    Generic(String),
+}
+
+impl TerminalApp {
+    pub fn name(&self) -> &str {
+        match self {
+            TerminalApp::Supported(name) => name,
+            TerminalApp::Generic(name) => name,
+        }
     }
 }
 
@@ -34,7 +49,8 @@ impl fmt::Display for GroupBy {
 pub struct Config {
     pub command: String,
     pub group_open_by: GroupBy,
-    pub terminal: String,
+
+    pub terminal: TerminalApp,
 }
 
 fn ts<E: ToString>(e: E) -> String {
@@ -42,10 +58,6 @@ fn ts<E: ToString>(e: E) -> String {
 }
 
 impl Config {
-    pub fn new(command: String, group_open_by: GroupBy, terminal: String) -> Config {
-        Config{command, group_open_by, terminal}
-    }
-
     pub fn load() -> Result<Config, String> {
         let mut path = crate::misc::get_app_resources()?;
         path.push("config.json");
