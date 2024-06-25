@@ -17,6 +17,7 @@ use rfd::FileDialog;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
 
 const MIN_INNER_SIZE: (f32, f32) = (400.0, 180.0);
+const MAX_INNER_SIZE: (f32, f32) = (550.0, 225.0);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const SECTION_PADDING: f32 = 15.0;
 
@@ -283,15 +284,17 @@ impl eframe::App for EchidnaApp {
 
             ui.add_space(SECTION_PADDING);
 
-            ui.horizontal(|ui| {
-                if ui.button("Save As..").clicked() {
-                    self.generate();
-                }
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                    if ui.button("?").clicked() {
-                        self.show_help.store(true, Ordering::Relaxed);
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Save As..").clicked() {
+                        self.generate();
                     }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                        if ui.button("?").clicked() {
+                            self.show_help.store(true, Ordering::Relaxed);
+                        }
+                    });
                 });
             });
 
@@ -375,6 +378,7 @@ fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_min_inner_size(MIN_INNER_SIZE)
+            .with_max_inner_size(MAX_INNER_SIZE)
             .with_icon(load_icon()),
         ..Default::default()
     };
