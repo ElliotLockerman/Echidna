@@ -5,24 +5,25 @@ use std::process::{Command, Stdio};
 use std::io::Write;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
-use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use maplit::hashmap;
+use indexmap::{IndexMap,indexmap};
 
 type RunInNewWindow = fn(bash: &OsStr) -> Result<(), String>;
 
 lazy_static! {
-    static ref TERMINALS: HashMap<String, RunInNewWindow> = hashmap! {
+    // TERMINALS and TERM_ORDER must have exactly the same keys!!!
+    static ref TERMINALS: IndexMap<String, RunInNewWindow> = indexmap! {
         "Terminal.app".into() => terminal_dot_app::run_in_new_window as RunInNewWindow,
         "iTerm2".into() => iterm::run_in_new_window as RunInNewWindow,
     };
 }
 
+
 pub fn run_in_new_window(terminal: &str, bash: &OsStr) -> Result<(), String> {
     match TERMINALS.get(terminal) {
         Some(t) => t(bash),
-        None => Err(format!("Terminal {terminal} is not supported")),
+        None => Err(format!("Terminal '{terminal}' is not supported")),
     }
 }
 
@@ -57,7 +58,7 @@ fn run_jxa(jxa: &OsStr, arg: &OsStr) -> JxaResult {
     let output = child.wait_with_output().map_err(|e| format!("Error waiting on child: {e}"))?;
     if !output.status.success() {
         let msg = String::from_utf8_lossy(&output.stderr);
-        bailf!("Command \"{msg}\" exited with with an error: {msg}\n");
+        bailf!("Command '{msg}' exited with with an error: {msg}\n");
     }
 
     Ok(())

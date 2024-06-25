@@ -115,7 +115,7 @@ impl AppDelegate for EchidnaShimDelegate {
 
         let paths: Vec<_> = urls.into_iter().filter_map(|url| {
             if url.scheme() != "file" {
-                modal("Error", format!("'only 'file' schemes are supported, '{url}''s scheme is {}", url.scheme()));
+                modal("Error", format!("Only 'file' schemes are supported, '{url}''s scheme is {}", url.scheme()));
                 return None;
             }
 

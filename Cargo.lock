@@ -1265,10 +1265,10 @@ dependencies = [
  "handlebars",
  "home",
  "image 0.25.1",
+ "indexmap",
  "lazy_static",
  "libc",
  "log",
- "maplit",
  "opener",
  "rfd",
  "serde",
@@ -2401,12 +2401,6 @@ checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "maplit"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "maybe-rayon"
