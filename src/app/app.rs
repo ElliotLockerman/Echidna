@@ -5,14 +5,19 @@ use echidna_lib::{generate_shim_app, GenErr};
 use echidna_lib::{term, bail, bailf};
 
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
 use eframe::egui;
 use egui::viewport::IconData;
 use rfd::FileDialog;
+use egui_commonmark::{CommonMarkCache, commonmark_str};
 
-const MIN_INNER_SIZE: (f32, f32) = (400.0, 200.0);
+const MIN_INNER_SIZE: (f32, f32) = (400.0, 180.0);
+const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const SECTION_PADDING: f32 = 15.0;
 
 #[derive(better_default::Default)]
@@ -33,6 +38,9 @@ struct EchidnaApp {
 
     #[default("Terminal.app".to_owned())]
     terminal: String,
+
+    show_help: Arc<AtomicBool>,
+    help_cache: Arc<Mutex<CommonMarkCache>>,
 }
 
 impl EchidnaApp {
@@ -160,12 +168,36 @@ impl EchidnaApp {
         self.bundle_id += &self.default_file_name;
     }
 
+    fn draw_help(&self, ctx: &egui::Context) {
+        if !self.show_help.load(Ordering::Relaxed) {
+            return;
+        }
+
+        let vb = egui::viewport::ViewportBuilder::default()
+            .with_title("Help")
+            .with_min_inner_size(MIN_HELP_INNER_SIZE);
+        let vid = egui::viewport::ViewportId::from_hash_of("help window");
+        let show_help = self.show_help.clone();
+        let help_cache = self.help_cache.clone();
+        ctx.show_viewport_deferred(vid, vb, move |ctx, _| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    show_help.store(false, Ordering::Relaxed);
+                    return;
+                }
+
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    commonmark_str!("help", ui, &mut *help_cache.lock().unwrap(), "src/app/help.md");
+                });
+            });
+        });
+    }
 }
 
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Grid::new("Execution").num_columns(2).show(ui, |ui| {
+            egui::Grid::new("Form").num_columns(2).show(ui, |ui| {
                 ui.label("Command:");
                 ui.centered_and_justified(|ui| {
                     let cmd = egui::TextEdit::singleline(&mut self.cmd);
@@ -213,16 +245,23 @@ impl eframe::App for EchidnaApp {
                 });
                 ui.end_row();
 
-
-
-
             });
 
             ui.add_space(SECTION_PADDING);
 
-            if ui.button("Save As..").clicked() {
-                self.generate();
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Save As..").clicked() {
+                    self.generate();
+                }
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                    if ui.button("?").clicked() {
+                        self.show_help.store(true, Ordering::Relaxed);
+                    }
+                });
+            });
+
+            self.draw_help(ctx);
         });
     }
 }

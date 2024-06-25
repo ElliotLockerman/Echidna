@@ -40,4 +40,5 @@ libc = "0.2.155"
 clap = { version = "4.5.7", features = ["derive"] }
 lazy_static = "1.4.0"
 maplit = "1.0.2"
+egui_commonmark = { version = "0.16.1", features = ["macros"] }
 
