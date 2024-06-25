@@ -1,7 +1,8 @@
 
-use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::{term, bailf};
+use echidna_lib::config::{Config, GroupBy};
 use echidna_lib::misc::DEFAULT_UTIS;
+use echidna_lib::generate::generate_shim_app;
 
 use std::path::PathBuf;
 
@@ -63,7 +64,7 @@ fn main() -> Result<(), String> {
         bailf!("Couldn't find shim executable at '{}'", shim_path.display());
     }
 
-    echidna_lib::generate_shim_app(
+    generate_shim_app(
         &config,
         args.utis,
         &identifier,

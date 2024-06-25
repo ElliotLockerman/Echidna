@@ -1,7 +1,7 @@
 
 use echidna_lib::misc::{get_app_resources, DEFAULT_UTIS};
 use echidna_lib::config::{Config, GroupBy};
-use echidna_lib::{generate_shim_app, GenErr};
+use echidna_lib::generate::{generate_shim_app, GenErr};
 use echidna_lib::{term, bail, bailf};
 
 use std::sync::Arc;
