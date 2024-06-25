@@ -27,8 +27,16 @@ pub fn run_in_new_window(terminal: &str, bash: &OsStr) -> Result<(), String> {
     }
 }
 
+pub fn default_terminal() -> &'static str {
+    TERMINALS.keys().next().unwrap().as_str()
+}
+
 pub fn supported_terminals() -> impl IntoIterator<Item = &'static str> {
     TERMINALS.keys().map(|x| x.as_str())
+}
+
+pub fn supported_terminals_string() -> String {
+    itertools::join(supported_terminals(), ", ")
 }
 
 pub fn is_supported(terminal: &str) -> bool {

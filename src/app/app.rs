@@ -36,7 +36,7 @@ struct EchidnaApp {
     default_file_name: String,
     previous_name: Option<OsString>, // Previous name chosen by Save As
 
-    #[default("Terminal.app".to_owned())]
+    #[default(term::default_terminal().to_owned())]
     terminal: String,
 
     show_help: Arc<AtomicBool>,

@@ -8,42 +8,58 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+/// Generate a shim app.
 #[derive(Parser, Debug)]
 struct Args {
+    /// The terminal program to execute.
     command: String,
 
+    /// Path to new app, including app name.
     out_path: PathBuf,
 
-    #[arg(long, default_value_t = String::from(DEFAULT_UTIS))]
+    /// A comma-delimited list of Uniform Type Identifiers to support.
+    #[arg(long, default_value = DEFAULT_UTIS)]
     utis: String,
 
+
+    /// all: open together. none: one per window.
     #[arg(long, default_value_t = Default::default())]
     group_open_by: GroupBy,
 
-    #[arg(long, short, default_value_t = String::from("."))]
-    out_dir: String,
-
+    /// Path to the shim binary. [default: same directory as echidna-cli]
     #[arg(long)]
     shim_path: Option<String>,
 
+    /// Bundle Identifier. [default: com.example.{command}Opener]
     #[arg(long)]
-    identifier: Option<String>,
+    bundle_id: Option<String>,
 
+    /// Overwrite existing.
     #[arg(long, short, action)]
     force: bool,
 
-    #[arg(long, default_value_t = String::from("Terminal.app"))]
+    /// Terminal app to open in.
+    #[arg(
+        long,
+        default_value = term::default_terminal(),
+        help = String::from("Terminal app in which to open. Supported: ")
+            + term::supported_terminals_string().as_str()
+    )]
     terminal: String,
 }
 
 fn main() -> Result<(), String> {
     let args = Args::parse();
 
-    let identifier = args.identifier
+    let bundle_id = args.bundle_id
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
     if !term::is_supported(&args.terminal) {
-        eprintln!("Terminal {} is not supported", args.terminal);
+        eprintln!(
+            "Terminal {} is not supported. Supported: {}",
+            args.terminal,
+            term::supported_terminals_string(),
+        );
     }
     let config = Config::new(args.command, args.group_open_by, args.terminal);
 
@@ -67,7 +83,7 @@ fn main() -> Result<(), String> {
     generate_shim_app(
         &config,
         args.utis,
-        &identifier,
+        &bundle_id,
         &shim_path,
         args.out_path.clone(),
         args.force,
