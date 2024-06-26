@@ -20,6 +20,16 @@ impl Default for GroupBy {
     }
 }
 
+impl fmt::Display for GroupBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // For use by clap, lower case since actual cli arguments would be lower case
+        match self {
+            GroupBy::None => write!(f, "none"),
+            GroupBy::All => write!(f, "all"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum TerminalApp {
     Supported(String),
@@ -31,16 +41,6 @@ impl TerminalApp {
         match self {
             TerminalApp::Supported(name) => name,
             TerminalApp::Generic(name) => name,
-        }
-    }
-}
-
-impl fmt::Display for GroupBy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // For use by clap, lower case since actual cli arguments would be lower case
-        match self {
-            GroupBy::None => write!(f, "none"),
-            GroupBy::All => write!(f, "all"),
         }
     }
 }

@@ -25,35 +25,58 @@ const SECTION_PADDING: f32 = 15.0;
 // enum would be better, but it doesn't seem compatibel with egui.
 const GENERIC: &str = "Generic";
 
-#[derive(better_default::Default)]
+const TERM_KEY: &str = "TERM_KEY";
+const GENERIC_TERM_KEY: &str = "GENERIC_TERM_KEY";
+const GROUP_BY_KEY: &str = "GROUP_BY_KEY";
+
+const DEFAULT_BUNDLE_DOMAIN: &str = "com.example.";
+const DEFAULT_APP_NAME: &str = "YourAppName";
+
+#[derive(Default)]
 struct EchidnaApp {
     cmd: String,
 
-    #[default(DEFAULT_UTIS.to_string())]
     utis: String,
 
     group_by: GroupBy,
 
-    #[default("com.example.YourAppName".to_owned())]
     bundle_id: String,
-    ident_ever_changed: bool, // Disables setting default based on cmd
+    bundle_id_ever_changed: bool, // Disables setting default based on cmd
 
     default_file_name: String,
     previous_name: Option<OsString>, // Previous name chosen by Save As
 
-    #[default(term::default_terminal().to_owned())]
     terminal: String,
+    generic_terminal: String,
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
 
-    #[default("".to_owned())]
-    generic_terminal: String,
 }
 
 impl EchidnaApp {
-    fn new() -> Self {
-        EchidnaApp::default()
+    fn new_with_cc(cc: &eframe::CreationContext) -> Self {
+        let mut app = EchidnaApp::default();
+
+
+        let gets = |key, default: &str| {
+            cc.storage
+                .and_then(|x| x.get_string(key))
+                .unwrap_or_else(|| default.into())
+        };
+
+        app.terminal = gets(TERM_KEY, term::default_terminal());
+        app.generic_terminal = gets(GENERIC_TERM_KEY, "");
+        app.group_by = cc.storage
+            .and_then(|x| x.get_string(GROUP_BY_KEY))
+            .map(|x| serde_json::from_str::<GroupBy>(&x).expect("Error deserializing default GroupBy"))
+            .unwrap_or_else(|| GroupBy::default());
+
+        app.utis = DEFAULT_UTIS.to_owned();
+        app.bundle_id = DEFAULT_BUNDLE_DOMAIN.to_owned() + DEFAULT_APP_NAME;
+        app.default_file_name = DEFAULT_APP_NAME.to_owned();
+
+        app
     }
     
     fn generate_inner(&mut self) -> Result<(), String> {
@@ -163,12 +186,11 @@ impl EchidnaApp {
     }
 
     fn update_default_file_name(&mut self) {
-
         let word = self.cmd.split_whitespace().next();
         let word = match word {
             Some(x) => x,
             None => {
-                self.bundle_id += "YourAppName";
+                self.default_file_name = DEFAULT_APP_NAME.to_owned();
                 return;
             },
         };
@@ -183,9 +205,9 @@ impl EchidnaApp {
         self.default_file_name += "Opener";
     }
 
-    fn update_default_ident(&mut self) {
+    fn update_default_bundle_id(&mut self) {
         self.bundle_id.clear();
-        self.bundle_id += "com.yourdomain.";
+        self.bundle_id += DEFAULT_BUNDLE_DOMAIN;
         self.bundle_id += &self.default_file_name;
     }
 
@@ -236,11 +258,11 @@ impl eframe::App for EchidnaApp {
 
                 ui.label("Bundle Identifier:");
                 ui.centered_and_justified(|ui| {
-                    if !self.ident_ever_changed {
-                        self.update_default_ident();
+                    if !self.bundle_id_ever_changed {
+                        self.update_default_bundle_id();
                     }
                     if ui.text_edit_singleline(&mut self.bundle_id).changed() {
-                        self.ident_ever_changed = true;
+                        self.bundle_id_ever_changed = true;
                     }
                 });
                 ui.end_row();
@@ -301,6 +323,12 @@ impl eframe::App for EchidnaApp {
             self.draw_help(ctx);
         });
     }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        storage.set_string(TERM_KEY, self.terminal.clone());
+        storage.set_string(GENERIC_TERM_KEY, self.generic_terminal.clone());
+        storage.set_string(GROUP_BY_KEY, serde_json::to_string(&self.group_by).unwrap());
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -312,10 +340,6 @@ fn get_shim_path() -> Result<PathBuf, String> {
         rsc.push("echidna-shim");
         rsc
     };
-
-    if shim_path.exists() {
-        return Ok(shim_path);
-    }
 
     if shim_path.exists() {
         return Ok(shim_path);
@@ -386,9 +410,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Echidna",
         options,
-        Box::new(|_cc| {
-            Box::new(EchidnaApp::new())
-        }),
+        Box::new(|cc| Box::new(EchidnaApp::new_with_cc(cc))),
     )
 }
 
