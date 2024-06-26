@@ -4,16 +4,13 @@ use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::generate::{generate_shim_app, GenErr};
 use echidna_lib::{term, bail, bailf};
 
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::ffi::OsString;
+use std::sync::{Arc,Mutex};
+use std::sync::atomic::{AtomicBool,Ordering};
+use std::ffi::{OsString,OsStr};
 use std::path::PathBuf;
 
 use eframe::egui;
 use egui::viewport::IconData;
-use rfd::FileDialog;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
 
 // All eyeballed.
@@ -98,7 +95,7 @@ impl EchidnaApp {
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
         // an OsStr(ing). At least here the user has the chance  to fix it if it
         // gets mangled.
-        let dialog = FileDialog::new()
+        let dialog = rfd::FileDialog::new()
             .set_file_name(
                 self.previous_name.as_ref()
                     .map(|x| x.to_string_lossy().to_string())
@@ -108,7 +105,12 @@ impl EchidnaApp {
         let Some(app_path) = dialog.save_file() else {
             return Ok(());
         };
-        self.previous_name = app_path.file_name().map(|x| x.to_owned());
+
+        if let Some(name) = app_path.file_name() {
+            if name != OsStr::new(&self.default_file_name) {
+                self.previous_name = Some(name.to_owned());
+            }
+        }
 
         let terminal = if self.terminal == GENERIC {
             TerminalApp::Generic(self.generic_terminal.clone())
