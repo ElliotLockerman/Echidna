@@ -23,7 +23,7 @@ lazy_static! {
 pub fn run_in_new_window(config: &Config, bash: &OsStr) -> Result<(), String> {
     match &config.terminal {
         TerminalApp::Supported(name) => {
-            match TERMINALS.get(&*name) {
+            match TERMINALS.get(name) {
                 Some(fun) => fun(config, bash),
                 None => Err(format!("Terminal {} is not supported", &config.terminal.name())),
             }

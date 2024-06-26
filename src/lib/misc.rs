@@ -6,7 +6,7 @@ pub const DEFAULT_UTIS: &str = "public.text";
 #[macro_export]
 macro_rules! bail {
     ($e:expr) => {{
-        return Err($e);
+        return Err($e.into());
     }}
 }
 

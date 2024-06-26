@@ -66,7 +66,7 @@ impl Config {
 
         let conf: Config = serde_json::from_str(&conf_str).map_err(ts)?;
         if conf.command.is_empty() {
-            bail!("Config's 'command' field may not be empty".to_owned());
+            bail!("Config's 'command' field may not be empty");
         }
 
         Ok(conf)

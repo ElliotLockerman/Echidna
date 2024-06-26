@@ -1,5 +1,5 @@
 
-use echidna_lib::{term, bailf};
+use echidna_lib::{term, bail, bailf};
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::generate::generate_shim_app;
 use echidna_lib::misc::DEFAULT_UTIS;
@@ -59,7 +59,7 @@ fn main() -> Result<(), String> {
         .unwrap_or(format!("com.example.{}Opener", args.command));
 
     if args.terminal.is_some() && args.generic_terminal.is_some() {
-        return Err(format!("Only one of --terminal and --generic-terminal may be passed"));
+        bail!("Only one of --terminal and --generic-terminal may be passed");
     }
 
     let terminal = if let Some(term) = args.generic_terminal {

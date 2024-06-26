@@ -73,18 +73,18 @@ impl EchidnaApp {
         app.group_by = cc.storage
             .and_then(|x| x.get_string(GROUP_BY_KEY))
             .map(|x| serde_json::from_str::<GroupBy>(&x).expect("Error deserializing default GroupBy"))
-            .unwrap_or_else(|| GroupBy::default());
+            .unwrap_or_default();
 
-        app.utis = DEFAULT_UTIS.to_owned();
+        DEFAULT_UTIS.clone_into(&mut app.utis);
         app.bundle_id = DEFAULT_BUNDLE_DOMAIN.to_owned() + DEFAULT_APP_NAME;
-        app.default_file_name = DEFAULT_APP_NAME.to_owned();
+        DEFAULT_APP_NAME.clone_into(&mut app.default_file_name);
 
         app
     }
     
     fn generate_inner(&mut self) -> Result<(), String> {
         if self.cmd.is_empty() {
-            bail!("Command must not be empty".to_string());
+            bail!("Command must not be empty");
         }
 
         if self.terminal == GENERIC && self.generic_terminal.is_empty() {
@@ -92,7 +92,7 @@ impl EchidnaApp {
         }
 
         if self.bundle_id.is_empty() {
-            bail!("Bundle ID must not be empty".to_string());
+            bail!("Bundle ID must not be empty");
         }
 
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -193,7 +193,7 @@ impl EchidnaApp {
         let word = match word {
             Some(x) => x,
             None => {
-                self.default_file_name = DEFAULT_APP_NAME.to_owned();
+                DEFAULT_APP_NAME.clone_into(&mut self.default_file_name);
                 return;
             },
         };
@@ -344,7 +344,7 @@ impl EchidnaApp {
 
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let frame = egui::Frame::central_panel(&*ctx.style()).inner_margin(WINDOW_PADDING);
+        let frame = egui::Frame::central_panel(&ctx.style()).inner_margin(WINDOW_PADDING);
         egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
             self.draw(ui);
             self.draw_help(ctx);
