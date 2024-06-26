@@ -1,5 +1,5 @@
 
-use echidna_lib::config::{Config, GroupBy};
+use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::term;
 use echidna_lib::bail;
 
@@ -103,7 +103,22 @@ impl EchidnaShimDelegate {
 
     fn run_term(&self, bash: &OsStr) {
         if let Err(e) = term::run_in_new_window(&self.config, bash) {
-            modal("Error", format!("Error running `{bash:?}`: {e}"));
+            if e.contains("osascript is not allowed to send keystrokes") {
+                modal("Permissions Needed", "Accessibility permissions are needed for generic terminals. Enable them in System Setting -> Privacy & Security -> Accessibility.");
+                return;
+            }
+
+            if e.contains("Application can't be found") {
+                if let TerminalApp::Generic(name) = &self.config.terminal {
+                    modal(
+                        "Generic Terminal Not Found",
+                        format!("Couldn't find generic terminal '{name}'")
+                    );
+                    return;
+                }
+            }
+
+            modal("Error", e.to_string());
         }
     }
 }

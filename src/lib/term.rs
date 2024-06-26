@@ -1,5 +1,5 @@
 
-use crate::bailf;
+use crate::bail;
 use crate::config::{Config, TerminalApp};
 
 use std::process::{Command, Stdio};
@@ -71,7 +71,7 @@ fn run_jxa(jxa: &OsStr, term: &OsStr, arg: &OsStr) -> JxaResult {
     let output = child.wait_with_output().map_err(|e| format!("Error waiting on child: {e}"))?;
     if !output.status.success() {
         let msg = String::from_utf8_lossy(&output.stderr);
-        bailf!("Command '{msg}' exited with with an error: {msg}\n");
+        bail!(msg);
     }
 
     Ok(())
