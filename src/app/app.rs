@@ -16,10 +16,13 @@ use egui::viewport::IconData;
 use rfd::FileDialog;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
 
-const MIN_INNER_SIZE: (f32, f32) = (400.0, 180.0);
-const MAX_INNER_SIZE: (f32, f32) = (550.0, 225.0);
+// All eyeballed.
+const MIN_INNER_SIZE: (f32, f32) = (500.0, 200.0);
+const MAX_INNER_SIZE: (f32, f32) = (650.0, 200.0);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
-const SECTION_PADDING: f32 = 15.0;
+const WINDOW_PADDING: f32 = 20.0;
+const SECTION_PADDING: f32 = 20.0;
+const THUMBNAIL_SIZE: (f32, f32) = (128.0, 128.0);
 
 // Special value for terminal EchidnaApp::terminal indicating generic. Obviously, using the TerminalApp
 // enum would be better, but it doesn't seem compatibel with egui.
@@ -89,7 +92,7 @@ impl EchidnaApp {
         }
 
         if self.bundle_id.is_empty() {
-            bail!("Bundle Identifier must not be empty".to_string());
+            bail!("Bundle ID must not be empty".to_string());
         }
 
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -230,96 +233,120 @@ impl EchidnaApp {
                 }
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    commonmark_str!("help", ui, &mut *help_cache.lock().unwrap(), "src/app/help.md");
+                    commonmark_str!("help", ui, &mut *help_cache.lock().unwrap(), "app_files/help.md");
                 });
             });
         });
+    }
+
+    fn draw_form(&mut self, ui: &mut egui::Ui) {
+        egui::Grid::new("Form").num_columns(2).show(ui, |ui| {
+            ui.label("Command:")
+                .on_hover_text("Shell command to run to open files.");
+            ui.centered_and_justified(|ui| {
+                let cmd = egui::TextEdit::singleline(&mut self.cmd);
+                if ui.add(cmd).changed() {
+                    self.update_default_file_name();
+                }
+            });
+            ui.end_row();
+
+            ui.label("UTIs:")
+                .on_hover_text("Uniform Text Identifiers to support opening.");
+            ui.centered_and_justified(|ui| {
+                ui.text_edit_singleline(&mut self.utis);
+            });
+            ui.end_row();
+
+            ui.label("Bundle ID:")
+                .on_hover_text("Bundle identifier for new shim app. Should be unique.");
+            ui.centered_and_justified(|ui| {
+                if !self.bundle_id_ever_changed {
+                    self.update_default_bundle_id();
+                }
+                if ui.text_edit_singleline(&mut self.bundle_id).changed() {
+                    self.bundle_id_ever_changed = true;
+                }
+            });
+            ui.end_row();
+
+            ui.end_row(); // Spacer
+
+            ui.label("Terminal:");
+            ui.horizontal(|ui| {
+                egui::ComboBox::from_id_source("Terminal Combo Box")
+                    .selected_text(&self.terminal)
+                    .show_ui(ui, |ui| {
+                        for terminal in term::supported_terminals() {
+                            assert!(terminal != GENERIC);
+                            if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
+                                 terminal.clone_into(&mut self.terminal);
+                            }
+                        }
+
+                        if ui.selectable_label(self.terminal == GENERIC, GENERIC).clicked() {
+                            GENERIC.clone_into(&mut self.terminal);
+                        }
+                });
+
+
+                if self.terminal == GENERIC {
+                    let generic = egui::TextEdit::singleline(&mut self.generic_terminal)
+                        .hint_text("Terminal App Name");
+                    ui.add(generic);
+                }
+            });
+            ui.end_row();
+
+            ui.label("Open Files:").on_hover_text("Open files in single window or one window per file?");
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
+                ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
+            });
+            ui.end_row();
+
+        });
+    }
+
+
+    fn draw(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_top(|ui| {
+            ui.vertical(|ui| {
+                ui.add(
+                    egui::Image::new(egui::include_image!("../../app_files/shim_icon_256.png"))
+                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                );
+            });
+
+            ui.add_space(SECTION_PADDING);
+
+            self.draw_form(ui);
+        });
+
+        ui.add_space(SECTION_PADDING);
+
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("?").clicked() {
+                    self.show_help.store(true, Ordering::Relaxed);
+                }
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                    if ui.button("Save As…").clicked() {
+                        self.generate();
+                    }
+                });
+            });
+        });
+
     }
 }
 
 impl eframe::App for EchidnaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Grid::new("Form").num_columns(2).show(ui, |ui| {
-                ui.label("Command:");
-                ui.centered_and_justified(|ui| {
-                    let cmd = egui::TextEdit::singleline(&mut self.cmd);
-                    if ui.add(cmd).changed() {
-                        self.update_default_file_name();
-                    }
-                });
-                ui.end_row();
-
-                ui.label("Uniform Type Identifiers:");
-                ui.centered_and_justified(|ui| {
-                    ui.text_edit_singleline(&mut self.utis);
-                });
-                ui.end_row();
-
-                ui.label("Bundle Identifier:");
-                ui.centered_and_justified(|ui| {
-                    if !self.bundle_id_ever_changed {
-                        self.update_default_bundle_id();
-                    }
-                    if ui.text_edit_singleline(&mut self.bundle_id).changed() {
-                        self.bundle_id_ever_changed = true;
-                    }
-                });
-                ui.end_row();
-
-                ui.end_row(); // Spacer
-
-                ui.label("Terminal:");
-                ui.horizontal(|ui| {
-                    egui::ComboBox::from_id_source("Terminal Combo Box")
-                        .selected_text(&self.terminal)
-                        .show_ui(ui, |ui| {
-                            for terminal in term::supported_terminals() {
-                                assert!(terminal != GENERIC);
-                                if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
-                                     terminal.clone_into(&mut self.terminal);
-                                }
-                            }
-
-                            if ui.selectable_label(self.terminal == GENERIC, GENERIC).clicked() {
-                                GENERIC.clone_into(&mut self.terminal);
-                            }
-                    });
-
-
-                    if self.terminal == GENERIC {
-                        let generic = egui::TextEdit::singleline(&mut self.generic_terminal)
-                            .hint_text("Terminal App Name");
-                        ui.add(generic);
-                    }
-                });
-                ui.end_row();
-
-                ui.label("Open Files:");
-                ui.horizontal(|ui| {
-                    ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
-                    ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
-                });
-                ui.end_row();
-
-            });
-
-            ui.add_space(SECTION_PADDING);
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.horizontal(|ui| {
-                    if ui.button("Save As..").clicked() {
-                        self.generate();
-                    }
-
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                        if ui.button("?").clicked() {
-                            self.show_help.store(true, Ordering::Relaxed);
-                        }
-                    });
-                });
-            });
-
+        let frame = egui::Frame::central_panel(&*ctx.style()).inner_margin(WINDOW_PADDING);
+        egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
+            self.draw(ui);
             self.draw_help(ctx);
         });
     }
@@ -410,7 +437,10 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Echidna",
         options,
-        Box::new(|cc| Box::new(EchidnaApp::new_with_cc(cc))),
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Box::new(EchidnaApp::new_with_cc(cc))
+        }),
     )
 }
 

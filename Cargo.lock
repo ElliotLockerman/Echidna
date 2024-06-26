@@ -1262,6 +1262,7 @@ dependencies = [
  "clap",
  "eframe",
  "egui_commonmark",
+ "egui_extras",
  "handlebars",
  "home",
  "image 0.25.1",
