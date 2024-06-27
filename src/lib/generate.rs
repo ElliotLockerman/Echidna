@@ -27,7 +27,8 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
             {{/if}}
 
             <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
+            <string>Editor</string>
+
         </dict>
     </array>
 
@@ -50,20 +51,8 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
 
-    <key>LSUIElement</key>
-    <false/>
-
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-
-    <key>NSMainNibFile</key>
-    <string>MainMenu</string>
-
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
 </dict>
 </plist>
 "#;
