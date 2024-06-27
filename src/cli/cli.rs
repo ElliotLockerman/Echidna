@@ -58,7 +58,7 @@ struct Args {
 
 }
 
-fn main() -> Result<(), String> {
+fn run() -> Result<(), String> {
     let args = Args::parse();
 
     let bundle_id = args.bundle_id
@@ -116,5 +116,15 @@ fn main() -> Result<(), String> {
     )?;
 
     gen.save(args.force).map(|_| ()) .map_err(|e| e.to_msg(&args.out_path))
+}
+
+fn main() {
+    match run() {
+        Ok(()) => (),
+        Err(e) => {
+            eprintln!("Error: {e}");
+            std::process::exit(1);
+        },
+    }
 }
 
