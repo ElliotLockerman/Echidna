@@ -101,25 +101,30 @@ impl EchidnaShimDelegate {
         Self{config}
     }
 
-    fn run_term(&self, bash: &OsStr) {
-        if let Err(e) = term::run_in_new_window(&self.config, bash) {
-            if e.contains("osascript is not allowed to send keystrokes") {
-                modal("Permissions Needed", "Accessibility permissions are needed for generic terminals. Enable them in System Setting -> Privacy & Security -> Accessibility.");
-                return;
-            }
+    // Returns false if there was a known error that means future runs
+    // (for GropuBy::None) won't work.
+    fn run_term(&self, bash: &OsStr) -> bool {
+        let Err(e) = term::run_in_new_window(&self.config, bash) else {
+            return true;
+        };
 
-            if e.contains("Application can't be found") {
-                if let TerminalApp::Generic(name) = &self.config.terminal {
-                    modal(
-                        "Generic Terminal Not Found",
-                        format!("Couldn't find generic terminal '{name}'")
-                    );
-                    return;
-                }
-            }
-
-            modal("Error", e.to_string());
+        if e.contains("osascript is not allowed to send keystrokes") {
+            modal("Permissions Needed", "Accessibility permissions are needed for generic terminals. Enable them in System Setting -> Privacy & Security -> Accessibility.");
+            return false;
         }
+
+        if e.contains("Application can't be found") {
+            if let TerminalApp::Generic(name) = &self.config.terminal {
+                modal(
+                    "Generic Terminal Not Found",
+                    format!("Couldn't find generic terminal '{name}'")
+                );
+                return false;
+            }
+        }
+
+        modal("Error", e.to_string());
+        return true;
     }
 }
 
@@ -168,7 +173,9 @@ impl AppDelegate for EchidnaShimDelegate {
                 for path in paths {
                     let path = bash_quote(path);
                     let cmd2 = os_cat!(&cmd, &self.config.command, " ", &path);
-                    self.run_term(&cmd2);
+                    if !self.run_term(&cmd2) {
+                        break;
+                    }
                 }
             }
         }
