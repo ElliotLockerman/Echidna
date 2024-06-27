@@ -348,11 +348,11 @@ impl EchidnaApp {
                 }
             );
 
-            if ui.button("Select Icon...").clicked() {
+            if ui.button("Select (png)…").clicked() {
                 self.change_shim_icon();
             }
 
-            let reset_button = egui::Button::new("Reset Icon");
+            let reset_button = egui::Button::new("Default Icon");
             if ui.add_enabled(self.shim_icon_uri.is_some(), reset_button).clicked() {
                 self.shim_icon_path = None;
                 self.shim_icon_uri = None;

@@ -22,7 +22,7 @@ After launching Echidna, first fill out the fields:
 
 A custom icon can also be chosen with "Select Icon...". Currently, the GUI only supports `png`s, but the CLI can be used to choose any format MacOS supports, including `icns`.
 
-Then click `Save As…`, provide a file name and directory, and click `Save`. You can then set your shim app as the `Open With` handler, or launch it to provide a draggable target in the dock bar (no windows will appear after being launched, and launching isn't necessary for other use pattern).
+Then click `Save As…`, provide a file name and directory, and click `Save`. You can then set your shim app as the `Open With` handler, or launch it to provide a draggable target in the Dock (no windows will appear after being launched, and launching the shim app ahead of time isn't necessary).
 
 
 ## Repo Structure
