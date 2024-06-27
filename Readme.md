@@ -20,6 +20,8 @@ After launching Echidna, first fill out the fields:
 - **Terminal:** Select desired terminal application. Currently supported are Terminal.app and iTerm2. To try to use another terminal, select `Generic`, and enter the terminal's name. An attempt will be make to control the terminal by sending keystrokes (best effort). Permission must first be given for your shim app to control your computer in `System Preferences` -> `Privacy and Security` -> `Accessbility`.
 - **Open Files: () Together, () Individually:** If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window? Note that this only applies to files opened at one time - files opened thereafter will currently always open in new windows.
 
+A custom icon can also be chosen with "Select Icon...". Currently, the GUI only supports `png`s, but the CLI can be used to choose any format MacOS supports, including `icns`.
+
 Then click `Save As…`, provide a file name and directory, and click `Save`. You can then set your shim app as the `Open With` handler, or launch it to provide a draggable target in the dock bar (no windows will appear after being launched, and launching isn't necessary for other use pattern).
 
 

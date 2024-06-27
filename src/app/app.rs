@@ -17,7 +17,7 @@ use egui_commonmark::{CommonMarkCache, commonmark_str};
 use url::Url;
 
 // All eyeballed.
-const INNER_HEIGHT: f32 = 220.0;
+const INNER_HEIGHT: f32 = 230.0;
 const MIN_INNER_SIZE: (f32, f32) = (500.0, INNER_HEIGHT);
 const MAX_INNER_SIZE: (f32, f32) = (650.0, INNER_HEIGHT);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
@@ -348,8 +348,14 @@ impl EchidnaApp {
                 }
             );
 
-            if ui.button("Change Icon").clicked() {
+            if ui.button("Select Icon...").clicked() {
                 self.change_shim_icon();
+            }
+
+            let reset_button = egui::Button::new("Reset Icon");
+            if ui.add_enabled(self.shim_icon_uri.is_some(), reset_button).clicked() {
+                self.shim_icon_path = None;
+                self.shim_icon_uri = None;
             }
         });
     }
