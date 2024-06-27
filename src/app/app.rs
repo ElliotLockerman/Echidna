@@ -10,15 +10,19 @@ use std::ffi::{OsString,OsStr};
 use std::path::PathBuf;
 
 use eframe::egui;
+use egui::{Grid, Image};
+use egui::widgets::ImageSource;
 use egui::viewport::IconData;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
+use url::Url;
 
 // All eyeballed.
-const MIN_INNER_SIZE: (f32, f32) = (500.0, 200.0);
-const MAX_INNER_SIZE: (f32, f32) = (650.0, 200.0);
+const INNER_HEIGHT: f32 = 220.0;
+const MIN_INNER_SIZE: (f32, f32) = (500.0, INNER_HEIGHT);
+const MAX_INNER_SIZE: (f32, f32) = (650.0, INNER_HEIGHT);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const WINDOW_PADDING: f32 = 20.0;
-const SECTION_PADDING: f32 = 20.0;
+const SECTION_SPACING: f32 = 20.0;
 const THUMBNAIL_SIZE: (f32, f32) = (128.0, 128.0);
 
 // Special value for terminal EchidnaApp::terminal indicating generic. Obviously, using the TerminalApp
@@ -31,6 +35,9 @@ const GROUP_BY_KEY: &str = "GROUP_BY_KEY";
 
 const DEFAULT_BUNDLE_DOMAIN: &str = "com.example.";
 const DEFAULT_APP_NAME: &str = "YourAppName";
+
+const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
+
 
 #[derive(Default)]
 struct EchidnaApp {
@@ -48,6 +55,9 @@ struct EchidnaApp {
 
     terminal: String,
     generic_terminal: String,
+
+    shim_icon_path: Option<PathBuf>,
+    shim_icon_uri: Option<String>,
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
@@ -129,6 +139,7 @@ impl EchidnaApp {
             self.utis.clone(),
             &self.bundle_id,
             &shim_path,
+            self.shim_icon_path.as_deref(),
             app_path.clone(),
         )?;
         let res = gen.save(false);
@@ -235,7 +246,7 @@ impl EchidnaApp {
     }
 
     fn draw_form(&mut self, ui: &mut egui::Ui) {
-        egui::Grid::new("Form").num_columns(2).show(ui, |ui| {
+        Grid::new("Form").num_columns(2).show(ui, |ui| {
             ui.label("Command:")
                 .on_hover_text("Shell command to run to open files.");
             ui.centered_and_justified(|ui| {
@@ -303,22 +314,58 @@ impl EchidnaApp {
         });
     }
 
+    fn change_shim_icon(&mut self) {
+        let path = rfd::FileDialog::new()
+            .add_filter("image", &["png"])
+            .pick_file();
+
+        let Some(path) = path else {
+            // Pressed cancel.
+            return;
+        };
+
+        let uri = match Url::from_file_path(path.clone()) {
+            Ok(x) => x,
+            Err(()) => {
+                modal(format!("Couldn't parse path"));
+                return;
+            }
+        };
+
+        self.shim_icon_path = Some(path.into());
+        self.shim_icon_uri = Some(uri.into());
+    }
+
+    fn draw_icon_column(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.add(
+                if let Some(path) = &self.shim_icon_uri {
+                    Image::new(ImageSource::Uri(path.into()))
+                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                } else {
+                    Image::new(DEFAULT_SHIM_ICON_THUMB)
+                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                }
+            );
+
+            if ui.button("Change Icon").clicked() {
+                self.change_shim_icon();
+            }
+        });
+    }
+
 
     fn draw(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_top(|ui| {
-            ui.vertical(|ui| {
-                ui.add(
-                    egui::Image::new(egui::include_image!("../../app_files/shim_icon_256.png"))
-                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
-                );
-            });
+        Grid::new("Root")
+            .num_columns(2)
+            .spacing((SECTION_SPACING, 0.0.into()))
+            .show(ui, |ui| {
 
-            ui.add_space(SECTION_PADDING);
-
+            self.draw_icon_column(ui);
             self.draw_form(ui);
         });
 
-        ui.add_space(SECTION_PADDING);
+        ui.add_space(SECTION_SPACING);
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
             ui.horizontal(|ui| {

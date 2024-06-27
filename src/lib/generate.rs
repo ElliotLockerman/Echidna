@@ -165,16 +165,24 @@ fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), Str
     Ok((app_name, bundle_name, app_path))
 }
 
-fn write_icon(resources: &Path) -> Result<(), String> {
+fn write_icon(icon_path: Option<&Path>, resources: &Path) -> Result<(), String> {
     let mut shim_icon = resources.to_owned();
     shim_icon.push("AppIcon.icns");
-    fs::write(shim_icon, SHIM_APP_ICON)
-        .map_err(|e| format!(
-            "Error write shim's icon to temorary {}: {e}",
-            resources.display()
-        ))?;
-
-    Ok(())
+    match icon_path {
+        Some(path) => {
+            fs::copy(path, &shim_icon).map(|_| ()).map_err(|e| format!(
+                "Error copying custom shim from '{}' to temorary '{}': {e}",
+                path.display(),
+                shim_icon.display()
+            ))
+        },
+        None => {
+            fs::write(&shim_icon, SHIM_APP_ICON) .map_err(|e| format!(
+                "Error write shim's icon to temorary '{}': {e}",
+                shim_icon.display()
+            ))
+        }
+    }
 }
 
 fn save_bundle<S: AsRef<Path>, D: AsRef<Path>>(
@@ -240,6 +248,7 @@ impl Generator {
         utis: String,
         bundle_id: &str,
         shim_bin: &Path,
+        icon_path: Option<&Path>,
         app_path: PathBuf,
     ) -> Result<Generator, String> {
 
@@ -255,7 +264,7 @@ impl Generator {
         )?;
         write_shim_bin(&tmp_dir.mac_os(), &app_name, shim_bin)?;
         config.write(&tmp_dir.resources()).map_err(|e| format!("{e}"))?;
-        write_icon(&tmp_dir.resources())?;
+        write_icon(icon_path, &tmp_dir.resources())?;
 
         Ok(Generator{tmp_dir, final_bundle_path, saved: false})
     }

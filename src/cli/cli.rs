@@ -50,6 +50,12 @@ struct Args {
     /// --terminal.
     #[arg(long)]
     generic_terminal: Option<String>,
+
+    /// A custom icon for the shim app. Its just copied over in to the bundle and renamed .icns, so
+    /// it must be in a format supported by MacOS.
+    #[arg(long)]
+    icon: Option<PathBuf>,
+
 }
 
 fn main() -> Result<(), String> {
@@ -105,6 +111,7 @@ fn main() -> Result<(), String> {
         args.utis,
         &bundle_id,
         &shim_path,
+        args.icon.as_deref(),
         args.out_path.clone()
     )?;
 
