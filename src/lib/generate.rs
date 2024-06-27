@@ -1,5 +1,6 @@
 
 use crate::config::Config;
+use crate::bundle_tmp_dir::BundleTmpDir;
 
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -70,37 +71,34 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 const SHIM_APP_ICON: &[u8] = include_bytes!("../../app_files/ShimAppIcon.icns");
 
 
-pub enum GenErr {
+pub enum SaveErr {
     // AppAlreadyExists is separated out to give the user an opportunity to ovewrite.
     AppAlreadyExists,
     Other(String),
 }
 
-impl GenErr {
+impl SaveErr {
     pub fn to_msg(&self, app_dst_path: &Path) -> String {
         match self {
-            GenErr::AppAlreadyExists =>
+            SaveErr::AppAlreadyExists =>
                     format!("App already exists at '{}'. Run with [-f|--force] to overwrite.",
                     app_dst_path.display()
                 ),
-            GenErr::Other(msg) => msg.to_owned(),
+            SaveErr::Other(msg) => msg.to_owned(),
         }
     }
-}
-
-macro_rules! gen_err_other {
-    ($($arg:tt)+) => {{
-        GenErr::Other(format!($($arg)*))
-    }}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(target_os = "macos")]
-fn write_shim_bin(mac_os: &Path, app_name: &OsStr, shim_bin: &Path) -> Result<(), GenErr> {
+fn write_shim_bin(mac_os: &Path, app_name: &OsStr, shim_bin: &Path) -> Result<(), String> {
     let bin_path = mac_os.join(app_name);
     fs::copy(shim_bin, bin_path).map_err(|e|
-        gen_err_other!("Error copying shim binary '{}' to temporary directory '{}': {e}", shim_bin.display(), mac_os.display())
+        format!("Error copying shim binary '{}' to temporary directory '{}': {e}",
+            shim_bin.display(),
+            mac_os.display()
+        )
     )?;
 
     Ok(())
@@ -118,7 +116,7 @@ fn write_info_plist(
     app_name: &str,
     utis: &str,
     bundle_id: &str,
-) -> Result<(), GenErr> {
+) -> Result<(), String> {
 
     let utisv = parse_utis(utis);
 
@@ -130,33 +128,33 @@ fn write_info_plist(
             "utis": utisv,
             "bundle_id": bundle_id,
         }),
-    ).map_err(|e| gen_err_other!("Error rendering Info.plist template: {e}"))?;
+    ).map_err(|e| format!("Error rendering Info.plist template: {e}"))?;
 
     let plist_dir = contents.join("Info.plist");
 
     fs::write(&plist_dir, rendered).map_err(|e|
-        gen_err_other!("Error writing Info.plist to temporary directory '{}': {e}", plist_dir.display())
+        format!("Error writing Info.plist to temporary directory '{}': {e}", plist_dir.display())
     )?;
 
     Ok(())
 }
 
 // Returns (app_name, bundle_name); app_name is without .app, bundle_* has it
-fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), GenErr> {
-    let app_name = || app_path.file_name()
+fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), String> {
+    let file_name = || app_path.file_name()
         .map(|x| x.to_owned())
-        .ok_or_else(|| gen_err_other!("Couldn't get file name from {}", app_path.display()));
+        .ok_or_else(|| format!("Couldn't get file name from {}", app_path.display()));
 
     let app_name = match app_path.extension() {
         Some(ext) =>
             if ext == "app" {
                 app_path.file_stem()
-                    .ok_or_else(|| gen_err_other!("Couldn't get app name from path '{}'", app_path.display()))?
+                    .ok_or_else(|| format!("Couldn't get app name from path '{}'", app_path.display()))?
                     .to_owned()
             } else {
-                app_name()?
+                file_name()?
             }
-        None => app_name()?
+        None => file_name()?
     };
 
     let mut bundle_name = app_name.clone();
@@ -167,11 +165,11 @@ fn get_names(mut app_path: PathBuf) -> Result<(OsString, OsString, PathBuf), Gen
     Ok((app_name, bundle_name, app_path))
 }
 
-fn write_icon(resources: &Path) -> Result<(), GenErr> {
+fn write_icon(resources: &Path) -> Result<(), String> {
     let mut shim_icon = resources.to_owned();
     shim_icon.push("AppIcon.icns");
     fs::write(shim_icon, SHIM_APP_ICON)
-        .map_err(|e| gen_err_other!(
+        .map_err(|e| format!(
             "Error write shim's icon to temorary {}: {e}",
             resources.display()
         ))?;
@@ -179,10 +177,10 @@ fn write_icon(resources: &Path) -> Result<(), GenErr> {
     Ok(())
 }
 
-fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
+fn save_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     tmp_bundle: S,
     dst_bundle: D,
-    overwrite: bool) -> Result<(), GenErr> {
+    overwrite: bool) -> Result<(), SaveErr> {
 
     // Unfortunately not atomic, but an effort is made the protect existing data (unfortunately,
     // this effort isn't atomic either), but it should be ease to recreate shim apps.
@@ -204,12 +202,12 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     // The actual rename
     let res = fs::rename(tmp_bundle, dst_bundle).map_err(|e| {
         match e.raw_os_error() {
-            Some(libc::ENOTEMPTY) => GenErr::AppAlreadyExists, // ErrorKind::DirectoryNotEmpty not available on stable
-            Some(_) | None => gen_err_other!(
+            Some(libc::ENOTEMPTY) => SaveErr::AppAlreadyExists, // ErrorKind::DirectoryNotEmpty not available on stable
+            Some(_) | None => SaveErr::Other(format!(
                 "Error moving temporary app '{}' to out_dir '{}': {e}",
                 tmp_bundle.display(),
                 dst_bundle.display(),
-            ),
+            )),
         }
     });
 
@@ -223,63 +221,57 @@ fn move_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     res
 }
 
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
-// utis is a comma-delimited list of Uniform Type Identifiers to support.
-// Returns path to app bundle on success.
-pub fn generate_shim_app(
-    config: &Config,
-    utis: String,
-    bundle_id: &str,
-    shim_bin: &Path,
-    app_path: PathBuf,
-    overwrite: bool
-) -> Result<PathBuf, GenErr> {
+pub struct Generator {
+    tmp_dir: BundleTmpDir,
+    final_bundle_path: PathBuf,
+    saved: bool,
+}
 
-    let (app_name, bundle_name, final_bundle_path) = get_names(app_path)?;
+impl Generator {
 
-    let tmp_dir = tempdir::TempDir::new("echidna-lib")
-        .map_err(|e| gen_err_other!("Error creating temporary directory: {e}"))?;
+    // utis is a comma-delimited list of Uniform Type Identifiers to support.
+    // YOU MUST STILL CALL SAVE() AFTER.
+    pub fn gen(
+        config: &Config,
+        utis: String,
+        bundle_id: &str,
+        shim_bin: &Path,
+        app_path: PathBuf,
+    ) -> Result<Generator, String> {
 
-    let pretty_create_dir = |path: &Path| {
-        fs::create_dir(path).map_err(|e| {
-            let (prefix, relative) = {
-                match path.strip_prefix(tmp_dir.path()) {
-                    Ok(striped) => (tmp_dir.path(), striped),
-                    Err(_) => {
-                        // Just ignore it, we're formatting an error, its more important to get the
-                        // original error out than to figure this out.
-                        (path, path)
-                    }
-                }
-            };
-            gen_err_other!("Error creating directory '{}' in temp dir {}: {e}", relative.display(), prefix.display())
-        })
-    };
+        let (app_name, bundle_name, final_bundle_path) = get_names(app_path)?;
 
-    // All in a temporary directory.
-    let app_root = tmp_dir.path().join(bundle_name);
-    let contents = app_root.join("Contents");
-    let mac_os = contents.join("MacOS");
-    let resources = contents.join("Resources");
+        let tmp_dir = BundleTmpDir::new(&bundle_name)?;
 
-    pretty_create_dir(&app_root)?;
-    pretty_create_dir(&contents)?;
-    pretty_create_dir(&mac_os)?;
-    pretty_create_dir(&resources)?;
+        write_info_plist(
+            &tmp_dir.contents(),
+            &app_name.to_string_lossy(),
+            &utis,
+            bundle_id,
+        )?;
+        write_shim_bin(&tmp_dir.mac_os(), &app_name, shim_bin)?;
+        config.write(&tmp_dir.resources()).map_err(|e| format!("{e}"))?;
+        write_icon(&tmp_dir.resources())?;
 
-    write_info_plist(
-        &contents,
-        &app_name.to_string_lossy(),
-        &utis,
-        bundle_id,
-    )?;
-    write_shim_bin(&mac_os, &app_name, shim_bin)?;
-    config.write(&resources).map_err(|e| gen_err_other!("{e}"))?;
-    write_icon(&resources)?;
+        Ok(Generator{tmp_dir, final_bundle_path, saved: false})
+    }
 
-    move_bundle(app_root, &final_bundle_path, overwrite)?;
+    // Safe to call again after an error, but not after a success.
+    pub fn save(&mut self, overwrite: bool) -> Result<(), SaveErr> {
+        assert!(!self.saved);
+        let res = save_bundle(self.tmp_dir.app_root(), &self.final_bundle_path, overwrite);
+        if matches!(res, Ok(_)) {
+            self.saved = true;
+        }
+        res
+    }
 
-    Ok(final_bundle_path)
+    pub fn final_bundle_path(&self) -> &Path {
+        &*self.final_bundle_path
+    }
 }
 

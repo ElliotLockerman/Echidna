@@ -1,7 +1,7 @@
 
 use echidna_lib::{term, bail, bailf};
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
-use echidna_lib::generate::generate_shim_app;
+use echidna_lib::generate::Generator;
 use echidna_lib::misc::DEFAULT_UTIS;
 
 use std::path::PathBuf;
@@ -100,14 +100,14 @@ fn main() -> Result<(), String> {
         bailf!("Couldn't find shim executable at '{}'", shim_path.display());
     }
 
-    generate_shim_app(
+    let mut gen = Generator::gen(
         &config,
         args.utis,
         &bundle_id,
         &shim_path,
-        args.out_path.clone(),
-        args.force,
-    ).map(|_| ())
-        .map_err(|e| e.to_msg(&args.out_path))
+        args.out_path.clone()
+    )?;
+
+    gen.save(args.force).map(|_| ()) .map_err(|e| e.to_msg(&args.out_path))
 }
 

@@ -1,7 +1,7 @@
 
 use echidna_lib::misc::{get_app_resources, DEFAULT_UTIS};
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
-use echidna_lib::generate::{generate_shim_app, GenErr};
+use echidna_lib::generate::{Generator, SaveErr};
 use echidna_lib::{term, bail, bailf};
 
 use std::sync::{Arc,Mutex};
@@ -124,27 +124,27 @@ impl EchidnaApp {
         };
         let shim_path = get_shim_path()?;
 
-        let res = generate_shim_app(
+        let mut gen = Generator::gen(
             &config,
             self.utis.clone(),
             &self.bundle_id,
             &shim_path,
             app_path.clone(),
-            false,
-        );
+        )?;
+        let res = gen.save(false);
 
         match res {
-            Ok(final_path) => {
-                if let Err(e) = opener::reveal(final_path) {
+            Ok(()) => {
+                if let Err(e) = opener::reveal(gen.final_bundle_path()) {
                     eprintln!("{e}"); // No modal, failure here does no real harm.
                 }
                 return Ok(());
             },
             Err(err) => match err {
-                GenErr::Other(msg) => {
+                SaveErr::Other(msg) => {
                     bail!(msg);
                 },
-                GenErr::AppAlreadyExists => (),
+                SaveErr::AppAlreadyExists => (),
             }
         }
 
@@ -160,24 +160,17 @@ impl EchidnaApp {
             return Ok(());
         }
 
-        let res = generate_shim_app(
-            &config,
-            self.utis.clone(),
-            &self.bundle_id,
-            &shim_path,
-            app_path.clone(),
-            true,
-        );
+        let res = gen.save(true);
 
-        let final_path = match res {
-            Ok(x) => x,
-            Err(GenErr::Other(msg)) => bail!(msg),
-            Err(GenErr::AppAlreadyExists) => {
+        match res {
+            Ok(()) => (),
+            Err(SaveErr::Other(msg)) => bail!(msg),
+            Err(SaveErr::AppAlreadyExists) => {
                 bailf!("Still couldn't write destination '{}'", app_path.display());
             },
         };
 
-        if let Err(e) = opener::reveal(final_path) {
+        if let Err(e) = opener::reveal(gen.final_bundle_path()) {
             eprintln!("{e}"); // No modal, failure here does no real harm.
         }
 
