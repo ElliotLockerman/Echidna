@@ -33,7 +33,6 @@ const TERM_KEY: &str = "TERM_KEY";
 const GENERIC_TERM_KEY: &str = "GENERIC_TERM_KEY";
 const GROUP_BY_KEY: &str = "GROUP_BY_KEY";
 
-const DEFAULT_BUNDLE_DOMAIN: &str = "com.example.";
 const DEFAULT_APP_NAME: &str = "YourAppName";
 
 const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
@@ -46,9 +45,6 @@ struct EchidnaApp {
     utis: String,
 
     group_by: GroupBy,
-
-    bundle_id: String,
-    bundle_id_ever_changed: bool, // Disables setting default based on cmd
 
     default_file_name: String,
     previous_name: Option<OsString>, // Previous name chosen by Save As
@@ -83,7 +79,6 @@ impl EchidnaApp {
             .unwrap_or_default();
 
         DEFAULT_UTIS.clone_into(&mut app.utis);
-        app.bundle_id = DEFAULT_BUNDLE_DOMAIN.to_owned() + DEFAULT_APP_NAME;
         DEFAULT_APP_NAME.clone_into(&mut app.default_file_name);
 
         app
@@ -96,10 +91,6 @@ impl EchidnaApp {
 
         if self.terminal == GENERIC && self.generic_terminal.is_empty() {
             return Err("Generic terminal must not be empty".to_string());
-        }
-
-        if self.bundle_id.is_empty() {
-            bail!("Bundle ID must not be empty");
         }
 
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
@@ -137,8 +128,8 @@ impl EchidnaApp {
         let mut gen = Generator::gen(
             &config,
             self.utis.clone(),
-            &self.bundle_id,
             &shim_path,
+            None,
             self.shim_icon_path.as_deref(),
             app_path.clone(),
         )?;
@@ -214,12 +205,6 @@ impl EchidnaApp {
         self.default_file_name += "Opener";
     }
 
-    fn update_default_bundle_id(&mut self) {
-        self.bundle_id.clear();
-        self.bundle_id += DEFAULT_BUNDLE_DOMAIN;
-        self.bundle_id += &self.default_file_name;
-    }
-
     fn draw_help(&self, ctx: &egui::Context) {
         if !self.show_help.load(Ordering::Relaxed) {
             return;
@@ -261,18 +246,6 @@ impl EchidnaApp {
                 .on_hover_text("Uniform Text Identifiers to support opening.");
             ui.centered_and_justified(|ui| {
                 ui.text_edit_singleline(&mut self.utis);
-            });
-            ui.end_row();
-
-            ui.label("Bundle ID:")
-                .on_hover_text("Bundle identifier for new shim app. Should be unique.");
-            ui.centered_and_justified(|ui| {
-                if !self.bundle_id_ever_changed {
-                    self.update_default_bundle_id();
-                }
-                if ui.text_edit_singleline(&mut self.bundle_id).changed() {
-                    self.bundle_id_ever_changed = true;
-                }
             });
             ui.end_row();
 

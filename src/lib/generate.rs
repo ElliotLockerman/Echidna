@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::ffi::{OsStr, OsString};
 
+use rand::Rng;
+
 const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -174,6 +176,12 @@ fn write_icon(icon_path: Option<&Path>, resources: &Path) -> Result<(), String> 
     }
 }
 
+fn generate_bundle_id(app_name: &str) -> String {
+    let hostname = gethostname::gethostname();
+    let num = rand::thread_rng().gen_range(0..=999999);
+    format!("local.{}.{app_name}{num}", hostname.to_string_lossy())
+}
+
 fn save_bundle<S: AsRef<Path>, D: AsRef<Path>>(
     tmp_bundle: S,
     dst_bundle: D,
@@ -235,8 +243,8 @@ impl Generator {
     pub fn gen(
         config: &Config,
         utis: String,
-        bundle_id: &str,
         shim_bin: &Path,
+        bundle_id: Option<&str>,
         icon_path: Option<&Path>,
         app_path: PathBuf,
     ) -> Result<Generator, String> {
@@ -245,11 +253,13 @@ impl Generator {
 
         let tmp_dir = BundleTmpDir::new(&bundle_name)?;
 
+        let default_bundle_id = generate_bundle_id(&app_name.to_string_lossy());
+
         write_info_plist(
             &tmp_dir.contents(),
             &app_name.to_string_lossy(),
             &utis,
-            bundle_id,
+            bundle_id.unwrap_or(&default_bundle_id),
         )?;
         write_shim_bin(&tmp_dir.mac_os(), &app_name, shim_bin)?;
         config.write(&tmp_dir.resources()).map_err(|e| format!("{e}"))?;
