@@ -61,6 +61,13 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 const SHIM_APP_ICON: &[u8] = include_bytes!("../../app_files/ShimAppIcon.icns");
 
+#[derive(Clone, PartialEq, Eq)]
+pub enum DocType {
+    TextFiles,
+    AllDocs,
+    UTIs(String),
+    Exts(String),
+}
 
 pub enum SaveErr {
     // AppAlreadyExists is separated out to give the user an opportunity to ovewrite.
@@ -244,6 +251,7 @@ impl Generator {
         config: &Config,
         utis: String,
         shim_bin: &Path,
+        doc_type: DocType,
         bundle_id: Option<&str>,
         icon_path: Option<&Path>,
         app_path: PathBuf,

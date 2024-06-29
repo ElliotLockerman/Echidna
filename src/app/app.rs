@@ -37,12 +37,33 @@ const DEFAULT_APP_NAME: &str = "YourAppName";
 
 const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
 
+#[derive(Default, Clone, PartialEq, Eq)]
+enum DocType {
+    #[default]
+    TextFiles,
+    AllDocs,
+    UTIs,
+    Exts,
+}
+
+impl DocType {
+    fn display_name(&self) -> &str {
+        match self {
+            Self::TextFiles => "Text Files",
+            Self::AllDocs => "All Documents",
+            Self::UTIs => "Specific UTIs",
+            Self::Exts => "Specific Extensions",
+        }
+    }
+}
 
 #[derive(Default)]
 struct EchidnaApp {
     cmd: String,
 
+    doc_type: DocType,
     utis: String,
+    exts: String,
 
     group_by: GroupBy,
 
@@ -78,7 +99,6 @@ impl EchidnaApp {
             .map(|x| serde_json::from_str::<GroupBy>(&x).expect("Error deserializing default GroupBy"))
             .unwrap_or_default();
 
-        DEFAULT_UTIS.clone_into(&mut app.utis);
         DEFAULT_APP_NAME.clone_into(&mut app.default_file_name);
 
         app
@@ -125,9 +145,10 @@ impl EchidnaApp {
         };
         let shim_path = get_shim_path()?;
 
+        todo!("uti replacement");
         let mut gen = Generator::gen(
             &config,
-            self.utis.clone(),
+            "".to_owned(), // FIXME
             &shim_path,
             None,
             self.shim_icon_path.as_deref(),
@@ -242,10 +263,25 @@ impl EchidnaApp {
             });
             ui.end_row();
 
-            ui.label("UTIs:")
-                .on_hover_text("Uniform Text Identifiers to support opening.");
-            ui.centered_and_justified(|ui| {
-                ui.text_edit_singleline(&mut self.utis);
+            ui.label("Documents:")
+                .on_hover_text("Documents to support opening.");
+            ui.horizontal(|ui| {
+                egui::ComboBox::from_id_source("Document Type Combo Box")
+                    .selected_text(self.doc_type.display_name().to_owned())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.doc_type, DocType::TextFiles, DocType::TextFiles.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocType::AllDocs, DocType::AllDocs.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocType::UTIs, DocType::UTIs.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocType::Exts, DocType::Exts.display_name());
+                    });
+                
+                if self.doc_type == DocType::UTIs {
+                    ui.text_edit_singleline(&mut self.utis);
+                }
+
+                if self.doc_type == DocType::Exts {
+                    ui.text_edit_singleline(&mut self.exts);
+                }
             });
             ui.end_row();
 
@@ -266,7 +302,7 @@ impl EchidnaApp {
                         if ui.selectable_label(self.terminal == GENERIC, GENERIC).clicked() {
                             GENERIC.clone_into(&mut self.terminal);
                         }
-                });
+                    });
 
 
                 if self.terminal == GENERIC {
