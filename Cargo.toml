@@ -24,7 +24,7 @@ path = "src/lib/lib.rs"
 [dependencies]
 better_default = "1.0.0"
 eframe = { version = "0.27.2", features = ["persistence"] }
-image = { version = "0.25.1", features = ["png", "jpeg", "gif"] }
+image = { version = "0.24" } # Version must be same as egui_extra's image version
 opener = { version = "0.7.1", features = ["reveal"] }
 rfd = "0.14.1"
 cacao = "0.3.2"

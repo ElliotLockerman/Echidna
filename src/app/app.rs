@@ -8,13 +8,15 @@ use std::sync::{Arc,Mutex};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::ffi::{OsString,OsStr};
 use std::path::PathBuf;
+use std::io::Read;
 
 use eframe::egui;
-use egui::{Grid, Image};
+use egui::Grid;
 use egui::widgets::ImageSource;
 use egui::viewport::IconData;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
-use url::Url;
+use egui::load::Bytes;
+use lazy_static::lazy_static;
 
 // All eyeballed.
 const INNER_HEIGHT: f32 = 230.0;
@@ -38,6 +40,62 @@ const DEFAULT_APP_NAME: &str = "YourAppName";
 const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
 
 
+lazy_static! {
+    pub static ref SUPPORTED_EXTS: [&'static str; 17] = [
+        "jpg",
+        "jpeg",
+        "avif",
+        "avif",
+        "bmp",
+        "dds",
+        "exr",
+        "gif",
+        "hdr",
+        "ico",
+        "png",
+        "pnm",
+        "qoi",
+        "tga",
+        "tif",
+        "tiff",
+        "webp",
+    ];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone)]
+pub struct Image {
+    pub path: PathBuf,
+    pub buffer: Bytes,
+}
+
+impl Image {
+    pub fn new(path: PathBuf, buffer: Vec<u8>) -> Image {
+        Image{
+            path,
+            buffer: Bytes::from(buffer),
+        }
+    }
+
+    pub fn load(path: PathBuf) -> Result<Image, String> {
+        // Manually loading the image and passing it as bytes is the only way I
+        // could get it to handle URIs with spaces
+        let mut buffer = vec![];
+        let mut file = std::fs::File::open(path.clone()).map_err(|e| {
+            format!("Error opening {}: {e}", path.display())
+        })?;
+
+        file.read_to_end(&mut buffer).map_err(|e| {
+            format!("Error reading {}: {e}", path.display())
+        })?;
+
+        Ok(Image::new(path, buffer))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Default)]
 struct EchidnaApp {
     cmd: String,
@@ -52,8 +110,7 @@ struct EchidnaApp {
     terminal: String,
     generic_terminal: String,
 
-    shim_icon_path: Option<PathBuf>,
-    shim_icon_uri: Option<String>,
+    custom_shim_icon: Option<Image>,
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
@@ -130,7 +187,7 @@ impl EchidnaApp {
             self.utis.clone(),
             &shim_path,
             None,
-            self.shim_icon_path.as_deref(),
+            self.custom_shim_icon.as_ref().map(|x| &*x.path).as_deref(),
             app_path.clone(),
         )?;
         let res = gen.save(false);
@@ -289,7 +346,7 @@ impl EchidnaApp {
 
     fn change_shim_icon(&mut self) {
         let path = rfd::FileDialog::new()
-            .add_filter("image", &["png"])
+            .add_filter("image", &*SUPPORTED_EXTS)
             .pick_file();
 
         let Some(path) = path else {
@@ -297,38 +354,34 @@ impl EchidnaApp {
             return;
         };
 
-        let uri = match Url::from_file_path(path.clone()) {
-            Ok(x) => x,
-            Err(()) => {
-                modal(format!("Couldn't parse path"));
-                return;
-            }
+        self.custom_shim_icon = match Image::load(path.clone()) {
+            Ok(x) => Some(x),
+            Err(e) => {
+                modal(format!("Error loading icon from '{}': {e}", path.display()));
+                None
+            },
         };
-
-        self.shim_icon_path = Some(path.into());
-        self.shim_icon_uri = Some(uri.into());
     }
 
     fn draw_icon_column(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.add(
-                if let Some(path) = &self.shim_icon_uri {
-                    Image::new(ImageSource::Uri(path.into()))
+                if let Some(img) = &self.custom_shim_icon {
+                    egui::Image::from_bytes(img.path.display().to_string(), img.buffer.clone())
                         .fit_to_exact_size(THUMBNAIL_SIZE.into())
                 } else {
-                    Image::new(DEFAULT_SHIM_ICON_THUMB)
+                    egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
                         .fit_to_exact_size(THUMBNAIL_SIZE.into())
                 }
             );
 
-            if ui.button("Select (png)…").clicked() {
+            if ui.button("Select…").clicked() {
                 self.change_shim_icon();
             }
 
             let reset_button = egui::Button::new("Default Icon");
-            if ui.add_enabled(self.shim_icon_uri.is_some(), reset_button).clicked() {
-                self.shim_icon_path = None;
-                self.shim_icon_uri = None;
+            if ui.add_enabled(self.custom_shim_icon.is_some(), reset_button).clicked() {
+                self.custom_shim_icon = None;
             }
         });
     }
