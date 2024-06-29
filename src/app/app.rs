@@ -187,7 +187,7 @@ impl EchidnaApp {
             self.utis.clone(),
             &shim_path,
             None,
-            self.custom_shim_icon.as_ref().map(|x| &*x.path).as_deref(),
+            self.custom_shim_icon.as_ref().map(|x| &*x.path),
             app_path.clone(),
         )?;
         let res = gen.save(false);
@@ -390,7 +390,7 @@ impl EchidnaApp {
     fn draw(&mut self, ui: &mut egui::Ui) {
         Grid::new("Root")
             .num_columns(2)
-            .spacing((SECTION_SPACING, 0.0.into()))
+            .spacing((SECTION_SPACING, 0.0))
             .show(ui, |ui| {
 
             self.draw_icon_column(ui);

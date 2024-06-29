@@ -264,14 +264,14 @@ impl Generator {
         let default_bundle_id = generate_bundle_id(&app_name.to_string_lossy());
 
         write_info_plist(
-            &tmp_dir.contents(),
+            tmp_dir.contents(),
             &app_name.to_string_lossy(),
             &utis,
             bundle_id.unwrap_or(&default_bundle_id),
         )?;
-        write_shim_bin(&tmp_dir.mac_os(), &app_name, shim_bin)?;
-        config.write(&tmp_dir.resources()).map_err(|e| format!("{e}"))?;
-        write_icon(icon_path, &tmp_dir.resources())?;
+        write_shim_bin(tmp_dir.mac_os(), &app_name, shim_bin)?;
+        config.write(tmp_dir.resources()).map_err(|e| e.to_string())?;
+        write_icon(icon_path, tmp_dir.resources())?;
 
         Ok(Generator{tmp_dir, final_bundle_path, saved: false})
     }
@@ -280,14 +280,14 @@ impl Generator {
     pub fn save(&mut self, overwrite: bool) -> Result<(), SaveErr> {
         assert!(!self.saved);
         let res = save_bundle(self.tmp_dir.app_root(), &self.final_bundle_path, overwrite);
-        if matches!(res, Ok(_)) {
+        if res.is_ok() {
             self.saved = true;
         }
         res
     }
 
     pub fn final_bundle_path(&self) -> &Path {
-        &*self.final_bundle_path
+        &self.final_bundle_path
     }
 }
 
