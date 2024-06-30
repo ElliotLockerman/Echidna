@@ -46,4 +46,5 @@ itertools = "0.13.0"
 egui_extras = { version = "0.27.2", features = ["image", "all_loaders"] }
 gethostname = "0.4.3"
 rand = "0.8.5"
+icns = "0.3.1"
 

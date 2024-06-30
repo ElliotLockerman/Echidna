@@ -7,8 +7,9 @@ use echidna_lib::{term, bail, bailf};
 use std::sync::{Arc,Mutex};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::ffi::{OsString,OsStr};
-use std::path::PathBuf;
-use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::io::{Read, BufReader};
+use std::fs::File;
 
 use eframe::egui;
 use egui::Grid;
@@ -17,6 +18,7 @@ use egui::viewport::IconData;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
 use egui::load::Bytes;
 use lazy_static::lazy_static;
+use icns::IconFamily;
 
 // All eyeballed.
 const INNER_HEIGHT: f32 = 230.0;
@@ -41,7 +43,7 @@ const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../.
 
 
 lazy_static! {
-    pub static ref SUPPORTED_EXTS: [&'static str; 17] = [
+    pub static ref SUPPORTED_EXTS: &'static [&'static str] = &[
         "jpg",
         "jpeg",
         "avif",
@@ -59,6 +61,7 @@ lazy_static! {
         "tif",
         "tiff",
         "webp",
+        "icns",
     ];
 }
 
@@ -66,11 +69,13 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct Image {
-    pub path: PathBuf,
-    pub buffer: Bytes,
+    path: PathBuf,
+    buffer: Bytes,
 }
 
 impl Image {
+    const PNG_MAGIC: &'static [u8] = &[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
     pub fn new(path: PathBuf, buffer: Vec<u8>) -> Image {
         Image{
             path,
@@ -78,7 +83,57 @@ impl Image {
         }
     }
 
+    fn is_png(path: &Path) -> Result<bool, String> {
+        let mut file = File::open(path)
+            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+
+        let buf = &mut [0u8; Self::PNG_MAGIC.len()];
+        let num = file.read(&mut buf[..])
+            .map_err(|e| format!("Error reading '{}': {e}", path.display()))?;
+        if num != Self::PNG_MAGIC.len() {
+            bailf!("Unexpected EOF reading '{}'", path.display());
+        }
+
+        Ok(buf == Self::PNG_MAGIC)
+    }
+
+    fn load_icns(path: PathBuf) -> Result<Image, String> {
+        assert_eq!(path.extension(), Some(OsStr::new("icns")));
+        let file = File::open(&path)
+            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+        let file = BufReader::new(file);
+        let icon_family = IconFamily::read(file)
+            .map_err(|e| format!("Error parsing file '{}': {e}", path.display()))?;
+
+        // Somewhat arbitarily choose the one with the closest width.
+        let width = THUMBNAIL_SIZE.0.round() as i64;
+        let mut best_error = i64::MAX;
+        let mut best_type = None;
+        for icon_type in icon_family.available_icons() {
+            let error = (width - icon_type.pixel_width() as i64).abs();
+            if error <= best_error {
+                best_error = error;
+                best_type = Some(icon_type);
+            }
+        }
+
+        if best_type.is_none() {
+            return Err(format!("Unable to find an icon in '{}'", path.display()));
+        }
+
+        let icon = icon_family.get_icon_with_type(best_type.unwrap()).unwrap();
+
+        let mut buffer = vec![];
+        icon.write_png(&mut buffer).expect("Error writing data from icns to buffer");
+
+        Ok(Image::new(path, buffer))
+    }
+
     pub fn load(path: PathBuf) -> Result<Image, String> {
+        if path.extension() == Some(OsStr::new("icns")) && !Self::is_png(&path)? {
+            return Self::load_icns(path);
+        }
+
         // Manually loading the image and passing it as bytes is the only way I
         // could get it to handle URIs with spaces
         let mut buffer = vec![];
@@ -92,7 +147,12 @@ impl Image {
 
         Ok(Image::new(path, buffer))
     }
+
+    pub fn to_egui_image(&self) -> egui::Image<'static> {
+        egui::Image::from_bytes(self.path.display().to_string(), self.buffer.clone())
+    }
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -346,7 +406,7 @@ impl EchidnaApp {
 
     fn change_shim_icon(&mut self) {
         let path = rfd::FileDialog::new()
-            .add_filter("image", &*SUPPORTED_EXTS)
+            .add_filter("image", *SUPPORTED_EXTS)
             .pick_file();
 
         let Some(path) = path else {
@@ -367,8 +427,7 @@ impl EchidnaApp {
         ui.vertical_centered(|ui| {
             ui.add(
                 if let Some(img) = &self.custom_shim_icon {
-                    egui::Image::from_bytes(img.path.display().to_string(), img.buffer.clone())
-                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                    img.to_egui_image().fit_to_exact_size(THUMBNAIL_SIZE.into())
                 } else {
                     egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
                         .fit_to_exact_size(THUMBNAIL_SIZE.into())
