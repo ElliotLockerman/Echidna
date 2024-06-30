@@ -404,10 +404,11 @@ impl EchidnaApp {
         });
     }
 
-    fn change_shim_icon(&mut self) {
-        let path = rfd::FileDialog::new()
-            .add_filter("image", *SUPPORTED_EXTS)
-            .pick_file();
+    fn change_shim_icon(&mut self, path: Option<PathBuf>) {
+        let path = path.or_else(||
+            rfd::FileDialog::new()
+                .add_filter("image", *SUPPORTED_EXTS)
+                .pick_file());
 
         let Some(path) = path else {
             // Pressed cancel.
@@ -435,12 +436,22 @@ impl EchidnaApp {
             );
 
             if ui.button("Select…").clicked() {
-                self.change_shim_icon();
+                self.change_shim_icon(None);
             }
 
             let reset_button = egui::Button::new("Default Icon");
             if ui.add_enabled(self.custom_shim_icon.is_some(), reset_button).clicked() {
                 self.custom_shim_icon = None;
+            }
+        });
+    }
+
+    fn handle_dropped_files(&mut self, ctx: &egui::Context) {
+        ctx.input(|i| {
+            if !i.raw.dropped_files.is_empty() {
+                let file = &i.raw.dropped_files[0];
+                assert!(file.path.is_some());
+                self.change_shim_icon(file.path.clone());
             }
         });
     }
@@ -482,6 +493,8 @@ impl eframe::App for EchidnaApp {
             self.draw(ui);
             self.draw_help(ctx);
         });
+
+        self.handle_dropped_files(ctx);
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
