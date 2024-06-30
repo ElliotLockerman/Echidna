@@ -7,14 +7,18 @@ use echidna_lib::{term, bail, bailf};
 use std::sync::{Arc,Mutex};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::ffi::{OsString,OsStr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::io::{Read, BufReader};
+use std::fs::File;
 
 use eframe::egui;
-use egui::{Grid, Image};
+use egui::Grid;
 use egui::widgets::ImageSource;
 use egui::viewport::IconData;
 use egui_commonmark::{CommonMarkCache, commonmark_str};
-use url::Url;
+use egui::load::Bytes;
+use lazy_static::lazy_static;
+use icns::IconFamily;
 
 // All eyeballed.
 const INNER_HEIGHT: f32 = 230.0;
@@ -57,6 +61,120 @@ impl DocType {
     }
 }
 
+lazy_static! {
+    pub static ref SUPPORTED_EXTS: &'static [&'static str] = &[
+        "jpg",
+        "jpeg",
+        "avif",
+        "avif",
+        "bmp",
+        "dds",
+        "exr",
+        "gif",
+        "hdr",
+        "ico",
+        "png",
+        "pnm",
+        "qoi",
+        "tga",
+        "tif",
+        "tiff",
+        "webp",
+        "icns",
+    ];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone)]
+pub struct Image {
+    path: PathBuf,
+    buffer: Bytes,
+}
+
+impl Image {
+    const PNG_MAGIC: &'static [u8] = &[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+    pub fn new(path: PathBuf, buffer: Vec<u8>) -> Image {
+        Image{
+            path,
+            buffer: Bytes::from(buffer),
+        }
+    }
+
+    fn is_png(path: &Path) -> Result<bool, String> {
+        let mut file = File::open(path)
+            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+
+        let buf = &mut [0u8; Self::PNG_MAGIC.len()];
+        let num = file.read(&mut buf[..])
+            .map_err(|e| format!("Error reading '{}': {e}", path.display()))?;
+        if num != Self::PNG_MAGIC.len() {
+            bailf!("Unexpected EOF reading '{}'", path.display());
+        }
+
+        Ok(buf == Self::PNG_MAGIC)
+    }
+
+    fn load_icns(path: PathBuf) -> Result<Image, String> {
+        assert_eq!(path.extension(), Some(OsStr::new("icns")));
+        let file = File::open(&path)
+            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+        let file = BufReader::new(file);
+        let icon_family = IconFamily::read(file)
+            .map_err(|e| format!("Error parsing file '{}': {e}", path.display()))?;
+
+        // Somewhat arbitarily choose the one with the closest width.
+        let width = THUMBNAIL_SIZE.0.round() as i64;
+        let mut best_error = i64::MAX;
+        let mut best_type = None;
+        for icon_type in icon_family.available_icons() {
+            let error = (width - icon_type.pixel_width() as i64).abs();
+            if error <= best_error {
+                best_error = error;
+                best_type = Some(icon_type);
+            }
+        }
+
+        if best_type.is_none() {
+            return Err(format!("Unable to find an icon in '{}'", path.display()));
+        }
+
+        let icon = icon_family.get_icon_with_type(best_type.unwrap()).unwrap();
+
+        let mut buffer = vec![];
+        icon.write_png(&mut buffer).expect("Error writing data from icns to buffer");
+
+        Ok(Image::new(path, buffer))
+    }
+
+    pub fn load(path: PathBuf) -> Result<Image, String> {
+        if path.extension() == Some(OsStr::new("icns")) && !Self::is_png(&path)? {
+            return Self::load_icns(path);
+        }
+
+        // Manually loading the image and passing it as bytes is the only way I
+        // could get it to handle URIs with spaces
+        let mut buffer = vec![];
+        let mut file = std::fs::File::open(path.clone()).map_err(|e| {
+            format!("Error opening {}: {e}", path.display())
+        })?;
+
+        file.read_to_end(&mut buffer).map_err(|e| {
+            format!("Error reading {}: {e}", path.display())
+        })?;
+
+        Ok(Image::new(path, buffer))
+    }
+
+    pub fn to_egui_image(&self) -> egui::Image<'static> {
+        egui::Image::from_bytes(self.path.display().to_string(), self.buffer.clone())
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Default)]
 struct EchidnaApp {
     cmd: String,
@@ -73,8 +191,7 @@ struct EchidnaApp {
     terminal: String,
     generic_terminal: String,
 
-    shim_icon_path: Option<PathBuf>,
-    shim_icon_uri: Option<String>,
+    custom_shim_icon: Option<Image>,
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
@@ -151,7 +268,7 @@ impl EchidnaApp {
             "".to_owned(), // FIXME
             &shim_path,
             None,
-            self.shim_icon_path.as_deref(),
+            self.custom_shim_icon.as_ref().map(|x| &*x.path),
             app_path.clone(),
         )?;
         let res = gen.save(false);
@@ -323,48 +440,54 @@ impl EchidnaApp {
         });
     }
 
-    fn change_shim_icon(&mut self) {
-        let path = rfd::FileDialog::new()
-            .add_filter("image", &["png"])
-            .pick_file();
+    fn change_shim_icon(&mut self, path: Option<PathBuf>) {
+        let path = path.or_else(||
+            rfd::FileDialog::new()
+                .add_filter("image", *SUPPORTED_EXTS)
+                .pick_file());
 
         let Some(path) = path else {
             // Pressed cancel.
             return;
         };
 
-        let uri = match Url::from_file_path(path.clone()) {
-            Ok(x) => x,
-            Err(()) => {
-                modal(format!("Couldn't parse path"));
-                return;
-            }
+        self.custom_shim_icon = match Image::load(path.clone()) {
+            Ok(x) => Some(x),
+            Err(e) => {
+                modal(format!("Error loading icon from '{}': {e}", path.display()));
+                None
+            },
         };
-
-        self.shim_icon_path = Some(path.into());
-        self.shim_icon_uri = Some(uri.into());
     }
 
     fn draw_icon_column(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.add(
-                if let Some(path) = &self.shim_icon_uri {
-                    Image::new(ImageSource::Uri(path.into()))
-                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                if let Some(img) = &self.custom_shim_icon {
+                    img.to_egui_image().fit_to_exact_size(THUMBNAIL_SIZE.into())
                 } else {
-                    Image::new(DEFAULT_SHIM_ICON_THUMB)
+                    egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
                         .fit_to_exact_size(THUMBNAIL_SIZE.into())
                 }
             );
 
-            if ui.button("Select (png)…").clicked() {
-                self.change_shim_icon();
+            if ui.button("Select…").clicked() {
+                self.change_shim_icon(None);
             }
 
             let reset_button = egui::Button::new("Default Icon");
-            if ui.add_enabled(self.shim_icon_uri.is_some(), reset_button).clicked() {
-                self.shim_icon_path = None;
-                self.shim_icon_uri = None;
+            if ui.add_enabled(self.custom_shim_icon.is_some(), reset_button).clicked() {
+                self.custom_shim_icon = None;
+            }
+        });
+    }
+
+    fn handle_dropped_files(&mut self, ctx: &egui::Context) {
+        ctx.input(|i| {
+            if !i.raw.dropped_files.is_empty() {
+                let file = &i.raw.dropped_files[0];
+                assert!(file.path.is_some());
+                self.change_shim_icon(file.path.clone());
             }
         });
     }
@@ -373,7 +496,7 @@ impl EchidnaApp {
     fn draw(&mut self, ui: &mut egui::Ui) {
         Grid::new("Root")
             .num_columns(2)
-            .spacing((SECTION_SPACING, 0.0.into()))
+            .spacing((SECTION_SPACING, 0.0))
             .show(ui, |ui| {
 
             self.draw_icon_column(ui);
@@ -406,6 +529,8 @@ impl eframe::App for EchidnaApp {
             self.draw(ui);
             self.draw_help(ctx);
         });
+
+        self.handle_dropped_files(ctx);
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {

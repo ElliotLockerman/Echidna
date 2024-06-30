@@ -123,8 +123,8 @@ impl EchidnaShimDelegate {
             }
         }
 
-        modal("Error", e.to_string());
-        return true;
+        modal("Error", &e);
+        true
     }
 }
 
