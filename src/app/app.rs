@@ -485,12 +485,16 @@ impl EchidnaApp {
 
     fn draw_icon_column(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
+            let img_bg = ui.visuals().widgets.inactive.weak_bg_fill;
             ui.add(
                 if let Some(img) = &self.custom_shim_icon {
-                    img.to_egui_image().fit_to_exact_size(THUMBNAIL_SIZE.into())
+                    img.to_egui_image()
+                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                        .bg_fill(img_bg)
                 } else {
                     egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
                         .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                        .bg_fill(img_bg)
                 }
             );
 
