@@ -45,8 +45,7 @@ struct Args {
     #[arg(long)]
     generic_terminal: Option<String>,
 
-    /// A custom icon for the shim app. Its just copied over in to the bundle and renamed .icns, so
-    /// it must be in a format supported by MacOS.
+    /// A custom icon for the shim app.
     #[arg(long)]
     icon: Option<PathBuf>,
 
