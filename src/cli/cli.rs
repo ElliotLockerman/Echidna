@@ -1,8 +1,7 @@
 
 use echidna_lib::{term, bail, bailf};
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
-use echidna_lib::generate::Generator;
-use echidna_lib::misc::DEFAULT_UTIS;
+use echidna_lib::generate::{Generator, DocTypes};
 
 use std::path::PathBuf;
 
@@ -16,11 +15,6 @@ struct Args {
 
     /// Path to new app, including app name.
     out_path: PathBuf,
-
-    /// A comma-delimited list of Uniform Type Identifiers to support.
-    #[arg(long, default_value = DEFAULT_UTIS)]
-    utis: String,
-
 
     /// all: open together. none: one per window.
     #[arg(long, default_value_t = Default::default())]
@@ -56,6 +50,21 @@ struct Args {
     #[arg(long)]
     icon: Option<PathBuf>,
 
+    /// Support opening all text files (default). Only one --docs-* may be passed.
+    #[arg(long, group = "document-type")]
+    docs_text_files: bool,
+
+    /// Support opening all documents. Only one --docs-* may be passed.
+    #[arg(long, group = "document-type")]
+    docs_all_docs: bool,
+
+    /// A comma-delimited list of Uniform Type Identifiers to support opening. Only one --docs-* may be passed.
+    #[arg(long, group = "document-type")]
+    docs_utis: Option<String>,
+
+    /// A comma-delimited list of extensions to support opening. Only one --docs-* may be passed.
+    #[arg(long, group = "document-type")]
+    docs_exts: Option<String>,
 }
 
 fn run() -> Result<(), String> {
@@ -86,6 +95,18 @@ fn run() -> Result<(), String> {
         terminal,
     };
 
+    let doc_types = if args.docs_text_files {
+        DocTypes::TextFiles
+    } else if args.docs_all_docs {
+        DocTypes::AllDocs
+    } else if let Some(utis) = args.docs_utis {
+        DocTypes::UTIs(utis.clone())
+    } else if let Some(exts) = args.docs_exts {
+        DocTypes::Exts(exts)
+    } else {
+        DocTypes::default()
+    };
+
     let shim_path = match args.shim_path {
         Some(x) => x.into(),
         None => {
@@ -105,7 +126,7 @@ fn run() -> Result<(), String> {
 
     let mut gen = Generator::gen(
         &config,
-        args.utis,
+        &doc_types,
         &shim_path,
         args.bundle_id.as_deref(),
         args.icon.as_deref(),

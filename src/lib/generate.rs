@@ -26,6 +26,13 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
                 <string>{{this}}</string>
                 {{/each}}
             </array>
+            {{else if exts}}
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                {{#each exts}}
+                <string>{{this}}</string>
+                {{/each}}
+            </array>
             {{/if}}
 
             <key>CFBundleTypeRole</key>
@@ -61,12 +68,41 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 const SHIM_APP_ICON: &[u8] = include_bytes!("../../app_files/ShimAppIcon.icns");
 
-#[derive(Clone, PartialEq, Eq)]
-pub enum DocType {
+// UTIs and Exts are comma-delimited lists of Uniform Type Identifiers and Extensions,
+// respectively.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum DocTypes {
+    #[default]
     TextFiles,
     AllDocs,
     UTIs(String),
     Exts(String),
+}
+
+impl DocTypes {
+    pub fn to_info_kv(&self) -> (String, Vec<String>) {
+        use DocTypes::*;
+        match self {
+            TextFiles =>
+                ("utis".to_owned(), vec!["public.text".to_owned(), "public.data".to_owned()]),
+            AllDocs =>
+                ("utis".to_owned(), vec!["public.content".to_owned(), "public.data".to_owned()]),
+            UTIs(s) => {
+                let v = s.split(',')
+                    .map(|x| x.trim().to_owned())
+                    .filter(|x| !x.is_empty())
+                    .collect::<Vec<_>>();
+                ("utis".to_owned(), v)
+            },
+            Exts(s) => {
+                let v = s.split(',')
+                    .map(|x| x.trim().trim_start_matches('.').to_owned())
+                    .filter(|x| !x.is_empty())
+                    .collect::<Vec<_>>();
+                ("exts".to_owned(), v)
+            },
+        }
+    }
 }
 
 pub enum SaveErr {
@@ -102,28 +138,21 @@ fn write_shim_bin(mac_os: &Path, app_name: &OsStr, shim_bin: &Path) -> Result<()
     Ok(())
 }
 
-fn parse_utis(utis: &str) -> Vec<String> {
-    utis.split(',')
-        .map(|x| x.trim().trim_start_matches('.').to_owned())
-        .filter(|x| !x.is_empty())
-        .collect::<Vec<_>>()
-}
-
 fn write_info_plist(
     contents: &Path,
     app_name: &str,
-    utis: &str,
+    doc_type: &DocTypes,
     bundle_id: &str,
 ) -> Result<(), String> {
 
-    let utisv = parse_utis(utis);
+    let (file_selectors_key, file_selectors) = doc_type.to_info_kv();
 
     let reg = handlebars::Handlebars::new();
     let rendered = reg.render_template(
         INFO_PLIST_TEMPLATE,
         &serde_json::json!({
             "app_display_name": app_name,
-            "utis": utisv,
+            file_selectors_key: file_selectors,
             "bundle_id": bundle_id,
         }),
     ).map_err(|e| format!("Error rendering Info.plist template: {e}"))?;
@@ -253,13 +282,11 @@ pub struct Generator {
 
 impl Generator {
 
-    // utis is a comma-delimited list of Uniform Type Identifiers to support.
     // YOU MUST STILL CALL SAVE() AFTER.
     pub fn gen(
         config: &Config,
-        utis: String,
+        doc_type: &DocTypes,
         shim_bin: &Path,
-        doc_type: DocType,
         bundle_id: Option<&str>,
         icon_path: Option<&Path>,
         app_path: PathBuf,
@@ -274,7 +301,7 @@ impl Generator {
         write_info_plist(
             tmp_dir.contents(),
             &app_name.to_string_lossy(),
-            &utis,
+            doc_type,
             bundle_id.unwrap_or(&default_bundle_id),
         )?;
         write_shim_bin(tmp_dir.mac_os(), &app_name, shim_bin)?;

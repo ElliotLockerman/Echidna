@@ -15,7 +15,11 @@ Echidna is a Mac app for generating "shim applications" that allow opening files
 After launching Echidna, first fill out the fields:
 
 - **Command:** The terminal program to execute. The files, space-delimited, will be appended to this string and passed to the terminal. Only Bash-compatible commands are supported at the moment (due to the quoting required for the command and passed file paths).
-- **UTIs:** A comma-delimited list of [Uniform Type Identifiers](https://developer.apple.com/documentation/uniformtypeidentifiers) to support. The default of "public.text" will add your shim app to the "Open With" menu for text documents (and enable dragging them to the shim app icon), but you can add or remove UTIs to broaden or narrow this. Files with unsupported UTIs can still be set to open with your shim app with `Open With` -> `Other...`; if your shim app is greyed-out, switch `Enable:` from `Recommended Applications` to `All Applications`.
+- **Documents:** Document types to support opening. This will control which files your shim app appears in the `Open With` menu for. Other files will still be openable with `Open With` -> `Other...` (perhaps enabling `All Applications`). NB: UTI is [Uniform Type Identifier](https://developer.apple.com/documentation/uniformtypeidentifiers).
+    - _Text Files_: Support opening text files (UTIs: `public.text`, `public.data`)
+    - _All Documents_: Support opening all documents (UTIs: `public.content`, `public.data`)
+    - _Specific UTIs_: enter a comma-delimited list of UTIs to support.
+    - _Specific Extensions_: enter a comma-delimited list of extensions to support. Wildcard (`*`) is no extension.
 - **Terminal:** Select desired terminal application. Currently supported are Terminal.app and iTerm2. To try to use another terminal, select `Generic`, and enter the terminal's name. An attempt will be make to control the terminal by sending keystrokes (best effort). Permission must first be given for your shim app to control your computer in `System Preferences` -> `Privacy and Security` -> `Accessbility`.
 - **Open Files: () Together, () Individually:** If multiple files are opened simultaneously, should they all be passed to a single instantiation to the command (space-delimited), or should each open in it's own window? Note that this only applies to files opened at one time - files opened thereafter will currently always open in new windows.
 

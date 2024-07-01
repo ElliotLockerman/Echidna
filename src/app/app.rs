@@ -1,6 +1,7 @@
 
-use echidna_lib::misc::{get_app_resources, DEFAULT_UTIS};
+use echidna_lib::misc::get_app_resources;
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
+use echidna_lib::generate;
 use echidna_lib::generate::{Generator, SaveErr};
 use echidna_lib::{term, bail, bailf};
 
@@ -42,7 +43,7 @@ const DEFAULT_APP_NAME: &str = "YourAppName";
 const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
 
 #[derive(Default, Clone, PartialEq, Eq)]
-enum DocType {
+enum DocTypes {
     #[default]
     TextFiles,
     AllDocs,
@@ -50,13 +51,13 @@ enum DocType {
     Exts,
 }
 
-impl DocType {
+impl DocTypes {
     fn display_name(&self) -> &str {
         match self {
             Self::TextFiles => "Text Files",
             Self::AllDocs => "All Documents",
-            Self::UTIs => "Specific UTIs",
-            Self::Exts => "Specific Extensions",
+            Self::UTIs => "Specific UTIs:",
+            Self::Exts => "Specific Extensions:",
         }
     }
 }
@@ -179,7 +180,7 @@ impl Image {
 struct EchidnaApp {
     cmd: String,
 
-    doc_type: DocType,
+    doc_type: DocTypes,
     utis: String,
     exts: String,
 
@@ -226,6 +227,23 @@ impl EchidnaApp {
             bail!("Command must not be empty");
         }
 
+        let doc_type = match self.doc_type {
+            DocTypes::TextFiles => generate::DocTypes::TextFiles,
+            DocTypes::AllDocs => generate::DocTypes::AllDocs,
+            DocTypes::UTIs => {
+                if self.utis.is_empty() {
+                    bailf!("UTIs must not be empty");
+                }
+                generate::DocTypes::UTIs(self.utis.clone())
+            },
+            DocTypes::Exts => {
+                if self.exts.is_empty() {
+                    bailf!("Extensions must not be empty");
+                }
+                generate::DocTypes::Exts(self.exts.clone())
+            },
+        };
+
         if self.terminal == GENERIC && self.generic_terminal.is_empty() {
             return Err("Generic terminal must not be empty".to_string());
         }
@@ -262,10 +280,9 @@ impl EchidnaApp {
         };
         let shim_path = get_shim_path()?;
 
-        todo!("uti replacement");
         let mut gen = Generator::gen(
             &config,
-            "".to_owned(), // FIXME
+            &doc_type,
             &shim_path,
             None,
             self.custom_shim_icon.as_ref().map(|x| &*x.path),
@@ -386,18 +403,24 @@ impl EchidnaApp {
                 egui::ComboBox::from_id_source("Document Type Combo Box")
                     .selected_text(self.doc_type.display_name().to_owned())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.doc_type, DocType::TextFiles, DocType::TextFiles.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocType::AllDocs, DocType::AllDocs.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocType::UTIs, DocType::UTIs.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocType::Exts, DocType::Exts.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocTypes::TextFiles, DocTypes::TextFiles.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocTypes::AllDocs, DocTypes::AllDocs.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocTypes::UTIs, DocTypes::UTIs.display_name());
+                        ui.selectable_value(&mut self.doc_type, DocTypes::Exts, DocTypes::Exts.display_name());
                     });
                 
-                if self.doc_type == DocType::UTIs {
-                    ui.text_edit_singleline(&mut self.utis);
+                if self.doc_type == DocTypes::UTIs {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.utis)
+                            .hint_text("Comma-delimited")
+                    );
                 }
 
-                if self.doc_type == DocType::Exts {
-                    ui.text_edit_singleline(&mut self.exts);
+                if self.doc_type == DocTypes::Exts {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.exts)
+                            .hint_text("Comma-delimited")
+                    );
                 }
             });
             ui.end_row();
