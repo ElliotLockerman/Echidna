@@ -1,20 +1,18 @@
-
+use echidna_lib::bail;
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::term;
-use echidna_lib::bail;
 
 use std::ffi::{OsStr, OsString};
-use std::path::PathBuf;
 use std::os::unix::ffi::OsStringExt;
+use std::path::PathBuf;
 
 use core::str::FromStr;
 
-use cacao::appkit::{App, AppDelegate, Alert};
-use url::Url;
+use cacao::appkit::{Alert, App, AppDelegate};
 use log::{error, info};
-use std::env::VarError;
 use shell_quote::Bash;
-
+use std::env::VarError;
+use url::Url;
 
 fn init_log() {
     const LEVEL_KEY: &str = "ECH_SHIM_LOG_LEVEL";
@@ -41,22 +39,21 @@ fn init_log() {
     }
 
     let level = match std::env::var(LEVEL_KEY) {
-        Ok(x) => {
-            Some(log::Level::from_str(x.as_str()).map_err(|e| e.to_string())).transpose()
-        },
+        Ok(x) => Some(log::Level::from_str(x.as_str()).map_err(|e| e.to_string())).transpose(),
         Err(VarError::NotPresent) => Ok(None),
-        Err(VarError::NotUnicode(x)) => {
-            Err(format!("Non-unicode {LEVEL_KEY} value: {}", x.to_string_lossy()))
-        }
+        Err(VarError::NotUnicode(x)) => Err(format!(
+            "Non-unicode {LEVEL_KEY} value: {}",
+            x.to_string_lossy()
+        )),
     };
 
     match level {
-        Ok(Some(lev)) => { 
-            simple_logging::log_to_file(path, lev.to_level_filter()).unwrap(); 
-        },
+        Ok(Some(lev)) => {
+            simple_logging::log_to_file(path, lev.to_level_filter()).unwrap();
+        }
         Ok(None) => (), // No logging requested
-        Err(msg) => { 
-            simple_logging::log_to_file(path, log::Level::max().to_level_filter()).unwrap(); 
+        Err(msg) => {
+            simple_logging::log_to_file(path, log::Level::max().to_level_filter()).unwrap();
             error!("Invalid filter {msg}, set to max");
         }
     }
@@ -74,7 +71,6 @@ macro_rules! os_extend {
         $os_string.extend([$($vals.as_ref()),+]);
     }};
 }
-
 
 // Concatenate anything that implements AsRef<OsStr> into an OsString.
 macro_rules! os_cat {
@@ -98,7 +94,7 @@ struct EchidnaShimDelegate {
 
 impl EchidnaShimDelegate {
     fn new(config: Config) -> Self {
-        Self{config}
+        Self { config }
     }
 
     // Returns false if there was a known error that means future runs
@@ -117,7 +113,7 @@ impl EchidnaShimDelegate {
             if let TerminalApp::Generic(name) = &self.config.terminal {
                 modal(
                     "Generic Terminal Not Found",
-                    format!("Couldn't find generic terminal '{name}'")
+                    format!("Couldn't find generic terminal '{name}'"),
                 );
                 return false;
             }
@@ -129,25 +125,33 @@ impl EchidnaShimDelegate {
 }
 
 impl AppDelegate for EchidnaShimDelegate {
-
     fn open_urls(&self, urls: Vec<Url>) {
         info!("Got urls {urls:?}");
 
-        let paths: Vec<_> = urls.into_iter().filter_map(|url| {
-            if url.scheme() != "file" {
-                modal("Error", format!("Only 'file' schemes are supported, '{url}''s scheme is {}", url.scheme()));
-                return None;
-            }
-
-            let path: PathBuf = match url.to_file_path() {
-                Ok(x) => x,
-                Err(_) => {
-                    modal("Error", format!("'{url}' has no path"));
+        let paths: Vec<_> = urls
+            .into_iter()
+            .filter_map(|url| {
+                if url.scheme() != "file" {
+                    modal(
+                        "Error",
+                        format!(
+                            "Only 'file' schemes are supported, '{url}''s scheme is {}",
+                            url.scheme()
+                        ),
+                    );
                     return None;
-                },
-            };
-            Some(path)
-        }).collect();
+                }
+
+                let path: PathBuf = match url.to_file_path() {
+                    Ok(x) => x,
+                    Err(_) => {
+                        modal("Error", format!("'{url}' has no path"));
+                        return None;
+                    }
+                };
+                Some(path)
+            })
+            .collect();
 
         if paths.is_empty() {
             std::process::exit(0);
@@ -168,7 +172,7 @@ impl AppDelegate for EchidnaShimDelegate {
                     os_extend!(cmd, " ", &path);
                 }
                 self.run_term(&cmd);
-            },
+            }
             GroupBy::None => {
                 for path in paths {
                     let path = bash_quote(path);
@@ -187,8 +191,6 @@ impl AppDelegate for EchidnaShimDelegate {
     }
 }
 
-
-
 fn main() -> Result<(), String> {
     init_log();
 
@@ -197,10 +199,14 @@ fn main() -> Result<(), String> {
         Err(msg) => {
             modal("Error loading config", &msg);
             bail!(msg);
-        },
+        }
     };
 
-    App::new("com.lockerman.EchidnaShim", EchidnaShimDelegate::new(config)).run();
+    App::new(
+        "com.lockerman.EchidnaShim",
+        EchidnaShimDelegate::new(config),
+    )
+    .run();
 
     Ok(())
 }

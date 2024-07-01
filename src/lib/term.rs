@@ -1,14 +1,13 @@
-
 use crate::bail;
 use crate::config::{Config, TerminalApp};
 
-use std::process::{Command, Stdio};
-use std::io::Write;
 use std::ffi::OsStr;
+use std::io::Write;
 use std::os::unix::ffi::OsStrExt;
+use std::process::{Command, Stdio};
 
+use indexmap::{indexmap, IndexMap};
 use lazy_static::lazy_static;
-use indexmap::{IndexMap,indexmap};
 
 type RunInNewWindow = fn(config: &Config, bash: &OsStr) -> Result<(), String>;
 
@@ -22,11 +21,12 @@ lazy_static! {
 
 pub fn run_in_new_window(config: &Config, bash: &OsStr) -> Result<(), String> {
     match &config.terminal {
-        TerminalApp::Supported(name) => {
-            match TERMINALS.get(name) {
-                Some(fun) => fun(config, bash),
-                None => Err(format!("Terminal {} is not supported", &config.terminal.name())),
-            }
+        TerminalApp::Supported(name) => match TERMINALS.get(name) {
+            Some(fun) => fun(config, bash),
+            None => Err(format!(
+                "Terminal {} is not supported",
+                &config.terminal.name()
+            )),
         },
         TerminalApp::Generic(_) => generic::run_in_new_window(config, bash),
     }
@@ -63,12 +63,20 @@ fn run_jxa(jxa: &OsStr, term: &OsStr, arg: &OsStr) -> JxaResult {
         .spawn()
         .map_err(|e| "Run error: ".to_owned() + e.to_string().as_str() + "\n")?;
 
-    /* scope to close stdin and unblock osascript */ {
-        let mut child_stdin = child.stdin.take().ok_or("Couldn't get child's stdin".to_owned())?;
-        child_stdin.write(jxa.as_bytes()).map_err(|e| format!("Couldn't write to child's stdin: {e}"))?;
+    /* scope to close stdin and unblock osascript */
+    {
+        let mut child_stdin = child
+            .stdin
+            .take()
+            .ok_or("Couldn't get child's stdin".to_owned())?;
+        child_stdin
+            .write(jxa.as_bytes())
+            .map_err(|e| format!("Couldn't write to child's stdin: {e}"))?;
     }
 
-    let output = child.wait_with_output().map_err(|e| format!("Error waiting on child: {e}"))?;
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("Error waiting on child: {e}"))?;
     if !output.status.success() {
         let msg = String::from_utf8_lossy(&output.stderr);
         bail!(msg);
@@ -77,14 +85,12 @@ fn run_jxa(jxa: &OsStr, term: &OsStr, arg: &OsStr) -> JxaResult {
     Ok(())
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
-
 
 // MacOS's built-in terminal
 mod terminal_dot_app {
-    use std::ffi::OsStr;
     use crate::config::Config;
+    use std::ffi::OsStr;
 
     const JXA_RUN: &str = r#"
         function run(argv) {
@@ -108,8 +114,8 @@ mod terminal_dot_app {
 
 // iTerm2
 mod iterm {
-    use std::ffi::OsStr;
     use crate::config::Config;
+    use std::ffi::OsStr;
 
     const JXA_RUN: &str = r#"
         function run(argv) {
@@ -134,8 +140,8 @@ mod iterm {
 }
 
 mod generic {
-    use std::ffi::OsStr;
     use crate::config::Config;
+    use std::ffi::OsStr;
 
     const JXA_RUN: &str = r#"
     function run(argv) {
@@ -161,7 +167,10 @@ mod generic {
         // Assuming OsStr(ing) is backwards-compatible with ascii...
         let mut script = script.to_owned();
         script.push("\n");
-        super::run_jxa(OsStr::new(JXA_RUN), OsStr::new(config.terminal.name()), &script)
+        super::run_jxa(
+            OsStr::new(JXA_RUN),
+            OsStr::new(config.terminal.name()),
+            &script,
+        )
     }
 }
-

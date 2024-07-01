@@ -1,8 +1,6 @@
-
-use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::fs;
-
+use std::path::{Path, PathBuf};
 
 pub struct BundleTmpDir {
     _tmp_dir: tempdir::TempDir,
@@ -16,7 +14,6 @@ impl BundleTmpDir {
     pub fn new(bundle_name: &OsStr) -> Result<BundleTmpDir, String> {
         let tmp_dir = tempdir::TempDir::new("echidna-lib")
             .map_err(|e| format!("Error creating temporary directory: {e}"))?;
-
 
         // All in a temporary directory.
         let app_root = tmp_dir.path().join(bundle_name);
@@ -56,7 +53,6 @@ impl BundleTmpDir {
     }
 }
 
-
 fn pretty_create_dir_inner(path: &Path, tmp_root: &Path) -> Result<(), String> {
     fs::create_dir(path).map_err(|e| {
         let (prefix, relative) = {
@@ -69,7 +65,10 @@ fn pretty_create_dir_inner(path: &Path, tmp_root: &Path) -> Result<(), String> {
                 }
             }
         };
-        format!("Error creating directory '{}' in temp dir {}: {e}", relative.display(), prefix.display())
+        format!(
+            "Error creating directory '{}' in temp dir {}: {e}",
+            relative.display(),
+            prefix.display()
+        )
     })
 }
-

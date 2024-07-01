@@ -1,4 +1,3 @@
-
 use crate::bail;
 
 use std::fmt;
@@ -6,7 +5,7 @@ use std::fs;
 use std::path::Path;
 
 use clap::ValueEnum;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum GroupBy {
@@ -75,26 +74,16 @@ impl Config {
     pub fn write(&self, resources: &Path) -> Result<(), String> {
         let config_dir = resources.join("config.json");
 
-        let config_json = serde_json::to_string(self).map_err(|e|
-            format!("Error serializing config {self:?}: {e}")
-        )?;
+        let config_json = serde_json::to_string(self)
+            .map_err(|e| format!("Error serializing config {self:?}: {e}"))?;
 
-        fs::write(&config_dir, config_json).map_err(|e|
-            format!("Error writing config to temporary directory '{}': {e}", config_dir.display())
-        )?;
+        fs::write(&config_dir, config_json).map_err(|e| {
+            format!(
+                "Error writing config to temporary directory '{}': {e}",
+                config_dir.display()
+            )
+        })?;
 
         Ok(())
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

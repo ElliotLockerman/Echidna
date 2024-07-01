@@ -1,25 +1,24 @@
-
-use echidna_lib::misc::get_app_resources;
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
 use echidna_lib::generate;
 use echidna_lib::generate::{Generator, SaveErr};
-use echidna_lib::{term, bail, bailf};
+use echidna_lib::misc::get_app_resources;
+use echidna_lib::{bail, bailf, term};
 
-use std::sync::{Arc,Mutex};
-use std::sync::atomic::{AtomicBool,Ordering};
-use std::ffi::{OsString,OsStr};
-use std::path::{Path, PathBuf};
-use std::io::{Read, BufReader};
+use std::ffi::{OsStr, OsString};
 use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use eframe::egui;
-use egui::Grid;
-use egui::widgets::ImageSource;
-use egui::viewport::IconData;
-use egui_commonmark::{CommonMarkCache, commonmark_str};
 use egui::load::Bytes;
-use lazy_static::lazy_static;
+use egui::viewport::IconData;
+use egui::widgets::ImageSource;
+use egui::Grid;
+use egui_commonmark::{commonmark_str, CommonMarkCache};
 use icns::IconFamily;
+use lazy_static::lazy_static;
 
 // All eyeballed.
 const INNER_HEIGHT: f32 = 230.0;
@@ -40,7 +39,8 @@ const GROUP_BY_KEY: &str = "GROUP_BY_KEY";
 
 const DEFAULT_APP_NAME: &str = "YourAppName";
 
-const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> = egui::include_image!("../../app_files/shim_icon_256.png");
+const DEFAULT_SHIM_ICON_THUMB: ImageSource<'static> =
+    egui::include_image!("../../app_files/shim_icon_256.png");
 
 #[derive(Default, Clone, PartialEq, Eq)]
 enum DocTypes {
@@ -64,24 +64,8 @@ impl DocTypes {
 
 lazy_static! {
     pub static ref SUPPORTED_EXTS: &'static [&'static str] = &[
-        "jpg",
-        "jpeg",
-        "avif",
-        "avif",
-        "bmp",
-        "dds",
-        "exr",
-        "gif",
-        "hdr",
-        "ico",
-        "png",
-        "pnm",
-        "qoi",
-        "tga",
-        "tif",
-        "tiff",
-        "webp",
-        "icns",
+        "jpg", "jpeg", "avif", "avif", "bmp", "dds", "exr", "gif", "hdr", "ico", "png", "pnm",
+        "qoi", "tga", "tif", "tiff", "webp", "icns",
     ];
 }
 
@@ -97,18 +81,19 @@ impl Image {
     const PNG_MAGIC: &'static [u8] = &[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
     pub fn new(path: PathBuf, buffer: Vec<u8>) -> Image {
-        Image{
+        Image {
             path,
             buffer: Bytes::from(buffer),
         }
     }
 
     fn is_png(path: &Path) -> Result<bool, String> {
-        let mut file = File::open(path)
-            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+        let mut file =
+            File::open(path).map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
 
         let buf = &mut [0u8; Self::PNG_MAGIC.len()];
-        let num = file.read(&mut buf[..])
+        let num = file
+            .read(&mut buf[..])
             .map_err(|e| format!("Error reading '{}': {e}", path.display()))?;
         if num != Self::PNG_MAGIC.len() {
             bailf!("Unexpected EOF reading '{}'", path.display());
@@ -119,8 +104,8 @@ impl Image {
 
     fn load_icns(path: PathBuf) -> Result<Image, String> {
         assert_eq!(path.extension(), Some(OsStr::new("icns")));
-        let file = File::open(&path)
-            .map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
+        let file =
+            File::open(&path).map_err(|e| format!("Error opening '{}': {e}", path.display()))?;
         let file = BufReader::new(file);
         let icon_family = IconFamily::read(file)
             .map_err(|e| format!("Error parsing file '{}': {e}", path.display()))?;
@@ -144,7 +129,8 @@ impl Image {
         let icon = icon_family.get_icon_with_type(best_type.unwrap()).unwrap();
 
         let mut buffer = vec![];
-        icon.write_png(&mut buffer).expect("Error writing data from icns to buffer");
+        icon.write_png(&mut buffer)
+            .expect("Error writing data from icns to buffer");
 
         Ok(Image::new(path, buffer))
     }
@@ -157,13 +143,11 @@ impl Image {
         // Manually loading the image and passing it as bytes is the only way I
         // could get it to handle URIs with spaces
         let mut buffer = vec![];
-        let mut file = std::fs::File::open(path.clone()).map_err(|e| {
-            format!("Error opening {}: {e}", path.display())
-        })?;
+        let mut file = std::fs::File::open(path.clone())
+            .map_err(|e| format!("Error opening {}: {e}", path.display()))?;
 
-        file.read_to_end(&mut buffer).map_err(|e| {
-            format!("Error reading {}: {e}", path.display())
-        })?;
+        file.read_to_end(&mut buffer)
+            .map_err(|e| format!("Error reading {}: {e}", path.display()))?;
 
         Ok(Image::new(path, buffer))
     }
@@ -172,7 +156,6 @@ impl Image {
         egui::Image::from_bytes(self.path.display().to_string(), self.buffer.clone())
     }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -196,13 +179,11 @@ struct EchidnaApp {
 
     show_help: Arc<AtomicBool>,
     help_cache: Arc<Mutex<CommonMarkCache>>,
-
 }
 
 impl EchidnaApp {
     fn new_with_cc(cc: &eframe::CreationContext) -> Self {
         let mut app = EchidnaApp::default();
-
 
         let gets = |key, default: &str| {
             cc.storage
@@ -212,16 +193,19 @@ impl EchidnaApp {
 
         app.terminal = gets(TERM_KEY, term::default_terminal());
         app.generic_terminal = gets(GENERIC_TERM_KEY, "");
-        app.group_by = cc.storage
+        app.group_by = cc
+            .storage
             .and_then(|x| x.get_string(GROUP_BY_KEY))
-            .map(|x| serde_json::from_str::<GroupBy>(&x).expect("Error deserializing default GroupBy"))
+            .map(|x| {
+                serde_json::from_str::<GroupBy>(&x).expect("Error deserializing default GroupBy")
+            })
             .unwrap_or_default();
 
         DEFAULT_APP_NAME.clone_into(&mut app.default_file_name);
 
         app
     }
-    
+
     fn generate_inner(&mut self) -> Result<(), String> {
         if self.cmd.is_empty() {
             bail!("Command must not be empty");
@@ -235,13 +219,13 @@ impl EchidnaApp {
                     bailf!("UTIs must not be empty");
                 }
                 generate::DocTypes::UTIs(self.utis.clone())
-            },
+            }
             DocTypes::Exts => {
                 if self.exts.is_empty() {
                     bailf!("Extensions must not be empty");
                 }
                 generate::DocTypes::Exts(self.exts.clone())
-            },
+            }
         };
 
         if self.terminal == GENERIC && self.generic_terminal.is_empty() {
@@ -251,12 +235,12 @@ impl EchidnaApp {
         // Shame to have to use to_string_lossy(), everwhere else, the filename is
         // an OsStr(ing). At least here the user has the chance  to fix it if it
         // gets mangled.
-        let dialog = rfd::FileDialog::new()
-            .set_file_name(
-                self.previous_name.as_ref()
-                    .map(|x| x.to_string_lossy().to_string())
-                    .unwrap_or(self.default_file_name.clone())
-            );
+        let dialog = rfd::FileDialog::new().set_file_name(
+            self.previous_name
+                .as_ref()
+                .map(|x| x.to_string_lossy().to_string())
+                .unwrap_or(self.default_file_name.clone()),
+        );
 
         let Some(app_path) = dialog.save_file() else {
             return Ok(());
@@ -273,7 +257,7 @@ impl EchidnaApp {
         } else {
             TerminalApp::Supported(self.terminal.clone())
         };
-        let config = Config{
+        let config = Config {
             command: self.cmd.clone(),
             group_open_by: self.group_by,
             terminal,
@@ -296,20 +280,23 @@ impl EchidnaApp {
                     eprintln!("{e}"); // No modal, failure here does no real harm.
                 }
                 return Ok(());
-            },
+            }
             Err(err) => match err {
                 SaveErr::Other(msg) => {
                     bail!(msg);
-                },
+                }
                 SaveErr::AppAlreadyExists => (),
-            }
+            },
         }
 
         // Couldn't write app because one already exists. Give user a chance to ovewrite.
         let result = rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Error)
             .set_title("Error: Destination already exists")
-            .set_description(format!("Destination '{}' already exists. Overwrite?", app_path.display()))
+            .set_description(format!(
+                "Destination '{}' already exists. Overwrite?",
+                app_path.display()
+            ))
             .set_buttons(rfd::MessageButtons::YesNo)
             .show();
 
@@ -324,7 +311,7 @@ impl EchidnaApp {
             Err(SaveErr::Other(msg)) => bail!(msg),
             Err(SaveErr::AppAlreadyExists) => {
                 bailf!("Still couldn't write destination '{}'", app_path.display());
-            },
+            }
         };
 
         if let Err(e) = opener::reveal(gen.final_bundle_path()) {
@@ -347,11 +334,13 @@ impl EchidnaApp {
             None => {
                 DEFAULT_APP_NAME.clone_into(&mut self.default_file_name);
                 return;
-            },
+            }
         };
 
         let mut chars = word.chars();
-        let mut first = chars.next().expect("SplitWhitespace returned an empty string!?");
+        let mut first = chars
+            .next()
+            .expect("SplitWhitespace returned an empty string!?");
         first.make_ascii_uppercase();
 
         self.default_file_name.clear();
@@ -379,7 +368,12 @@ impl EchidnaApp {
                 }
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    commonmark_str!("help", ui, &mut *help_cache.lock().unwrap(), "app_files/help.md");
+                    commonmark_str!(
+                        "help",
+                        ui,
+                        &mut *help_cache.lock().unwrap(),
+                        "app_files/help.md"
+                    );
                 });
             });
         });
@@ -403,24 +397,34 @@ impl EchidnaApp {
                 egui::ComboBox::from_id_source("Document Type Combo Box")
                     .selected_text(self.doc_type.display_name().to_owned())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.doc_type, DocTypes::TextFiles, DocTypes::TextFiles.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocTypes::AllDocs, DocTypes::AllDocs.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocTypes::UTIs, DocTypes::UTIs.display_name());
-                        ui.selectable_value(&mut self.doc_type, DocTypes::Exts, DocTypes::Exts.display_name());
+                        ui.selectable_value(
+                            &mut self.doc_type,
+                            DocTypes::TextFiles,
+                            DocTypes::TextFiles.display_name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.doc_type,
+                            DocTypes::AllDocs,
+                            DocTypes::AllDocs.display_name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.doc_type,
+                            DocTypes::UTIs,
+                            DocTypes::UTIs.display_name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.doc_type,
+                            DocTypes::Exts,
+                            DocTypes::Exts.display_name(),
+                        );
                     });
-                
+
                 if self.doc_type == DocTypes::UTIs {
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.utis)
-                            .hint_text("Comma-delimited")
-                    );
+                    ui.add(egui::TextEdit::singleline(&mut self.utis).hint_text("Comma-delimited"));
                 }
 
                 if self.doc_type == DocTypes::Exts {
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.exts)
-                            .hint_text("Comma-delimited")
-                    );
+                    ui.add(egui::TextEdit::singleline(&mut self.exts).hint_text("Comma-delimited"));
                 }
             });
             ui.end_row();
@@ -434,16 +438,21 @@ impl EchidnaApp {
                     .show_ui(ui, |ui| {
                         for terminal in term::supported_terminals() {
                             assert!(terminal != GENERIC);
-                            if ui.selectable_label(self.terminal == terminal, terminal).clicked() {
-                                 terminal.clone_into(&mut self.terminal);
+                            if ui
+                                .selectable_label(self.terminal == terminal, terminal)
+                                .clicked()
+                            {
+                                terminal.clone_into(&mut self.terminal);
                             }
                         }
 
-                        if ui.selectable_label(self.terminal == GENERIC, GENERIC).clicked() {
+                        if ui
+                            .selectable_label(self.terminal == GENERIC, GENERIC)
+                            .clicked()
+                        {
                             GENERIC.clone_into(&mut self.terminal);
                         }
                     });
-
 
                 if self.terminal == GENERIC {
                     let generic = egui::TextEdit::singleline(&mut self.generic_terminal)
@@ -453,21 +462,22 @@ impl EchidnaApp {
             });
             ui.end_row();
 
-            ui.label("Open Files:").on_hover_text("Open files in single window or one window per file?");
+            ui.label("Open Files:")
+                .on_hover_text("Open files in single window or one window per file?");
             ui.horizontal(|ui| {
                 ui.radio_value(&mut self.group_by, GroupBy::All, "Together");
                 ui.radio_value(&mut self.group_by, GroupBy::None, "Individually");
             });
             ui.end_row();
-
         });
     }
 
     fn change_shim_icon(&mut self, path: Option<PathBuf>) {
-        let path = path.or_else(||
+        let path = path.or_else(|| {
             rfd::FileDialog::new()
                 .add_filter("image", *SUPPORTED_EXTS)
-                .pick_file());
+                .pick_file()
+        });
 
         let Some(path) = path else {
             // Pressed cancel.
@@ -479,31 +489,32 @@ impl EchidnaApp {
             Err(e) => {
                 modal(format!("Error loading icon from '{}': {e}", path.display()));
                 None
-            },
+            }
         };
     }
 
     fn draw_icon_column(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             let img_bg = ui.visuals().widgets.inactive.weak_bg_fill;
-            ui.add(
-                if let Some(img) = &self.custom_shim_icon {
-                    img.to_egui_image()
-                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
-                        .bg_fill(img_bg)
-                } else {
-                    egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
-                        .fit_to_exact_size(THUMBNAIL_SIZE.into())
-                        .bg_fill(img_bg)
-                }
-            );
+            ui.add(if let Some(img) = &self.custom_shim_icon {
+                img.to_egui_image()
+                    .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                    .bg_fill(img_bg)
+            } else {
+                egui::Image::new(DEFAULT_SHIM_ICON_THUMB)
+                    .fit_to_exact_size(THUMBNAIL_SIZE.into())
+                    .bg_fill(img_bg)
+            });
 
             if ui.button("Select…").clicked() {
                 self.change_shim_icon(None);
             }
 
             let reset_button = egui::Button::new("Default Icon");
-            if ui.add_enabled(self.custom_shim_icon.is_some(), reset_button).clicked() {
+            if ui
+                .add_enabled(self.custom_shim_icon.is_some(), reset_button)
+                .clicked()
+            {
                 self.custom_shim_icon = None;
             }
         });
@@ -519,16 +530,14 @@ impl EchidnaApp {
         });
     }
 
-
     fn draw(&mut self, ui: &mut egui::Ui) {
         Grid::new("Root")
             .num_columns(2)
             .spacing((SECTION_SPACING, 0.0))
             .show(ui, |ui| {
-
-            self.draw_icon_column(ui);
-            self.draw_form(ui);
-        });
+                self.draw_icon_column(ui);
+                self.draw_form(ui);
+            });
 
         ui.add_space(SECTION_SPACING);
 
@@ -545,7 +554,6 @@ impl EchidnaApp {
                 });
             });
         });
-
     }
 }
 
@@ -584,11 +592,14 @@ fn get_shim_path() -> Result<PathBuf, String> {
     // Maybe they're running the executable directly from the targets/ directory? Then echidna-shim
     // will be right there.
     let shim_path = {
-        let mut path = std::env::current_exe()
-            .map_err(|e| format!("Failed to get current exe: {e}"))?;
+        let mut path =
+            std::env::current_exe().map_err(|e| format!("Failed to get current exe: {e}"))?;
 
         if !path.pop() {
-            bailf!("Couldn't pop binary filename from path '{}' !?", shim_path.display());
+            bailf!(
+                "Couldn't pop binary filename from path '{}' !?",
+                shim_path.display()
+            );
         }
         path.push("echidna-shim");
         path
@@ -602,7 +613,6 @@ fn get_shim_path() -> Result<PathBuf, String> {
     Err("Can't find echidna-shim executable".to_owned())
 }
 
-
 fn modal<S: Into<String>>(msg: S) {
     rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Error)
@@ -613,15 +623,15 @@ fn modal<S: Into<String>>(msg: S) {
 }
 
 fn load_icon() -> Arc<IconData> {
-    let image_ret = image::load_from_memory(include_bytes!("../../app_files/icon.png"))
-        .map(|x| x.into_rgb8());
+    let image_ret =
+        image::load_from_memory(include_bytes!("../../app_files/icon.png")).map(|x| x.into_rgb8());
 
     let image = match image_ret {
         Ok(x) => x,
         Err(_) => {
             // TODO: logging
             return std::sync::Arc::new(egui::viewport::IconData::default());
-        },
+        }
     };
 
     let (width, height) = image.dimensions();
@@ -652,4 +662,3 @@ fn main() -> Result<(), eframe::Error> {
         }),
     )
 }
-

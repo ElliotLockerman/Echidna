@@ -1,7 +1,6 @@
-
-use echidna_lib::{term, bail, bailf};
 use echidna_lib::config::{Config, GroupBy, TerminalApp};
-use echidna_lib::generate::{Generator, DocTypes};
+use echidna_lib::generate::{DocTypes, Generator};
+use echidna_lib::{bail, bailf, term};
 
 use std::path::PathBuf;
 
@@ -88,7 +87,7 @@ fn run() -> Result<(), String> {
         TerminalApp::Supported("Terminal.app".to_owned())
     };
 
-    let config = Config{
+    let config = Config {
         command: args.command,
         group_open_by: args.group_open_by,
         terminal,
@@ -109,10 +108,13 @@ fn run() -> Result<(), String> {
     let shim_path = match args.shim_path {
         Some(x) => x.into(),
         None => {
-            let mut path = std::env::current_exe()
-                .map_err(|e| format!("Failed to get current exe: {e}"))?;
+            let mut path =
+                std::env::current_exe().map_err(|e| format!("Failed to get current exe: {e}"))?;
             if !path.pop() {
-                bailf!("Couldn't pop binary filename from path '{}' !?", path.display());
+                bailf!(
+                    "Couldn't pop binary filename from path '{}' !?",
+                    path.display()
+                );
             }
             path.push("echidna-shim");
             path
@@ -129,10 +131,12 @@ fn run() -> Result<(), String> {
         &shim_path,
         args.bundle_id.as_deref(),
         args.icon.as_deref(),
-        args.out_path.clone()
+        args.out_path.clone(),
     )?;
 
-    gen.save(args.force).map(|_| ()) .map_err(|e| e.to_msg(&args.out_path))
+    gen.save(args.force)
+        .map(|_| ())
+        .map_err(|e| e.to_msg(&args.out_path))
 }
 
 fn main() {
@@ -141,7 +145,6 @@ fn main() {
         Err(e) => {
             eprintln!("Error: {e}");
             std::process::exit(1);
-        },
+        }
     }
 }
-
