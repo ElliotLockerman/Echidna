@@ -23,7 +23,7 @@ use lazy_static::lazy_static;
 // All eyeballed.
 const INNER_HEIGHT: f32 = 230.0;
 const MIN_INNER_SIZE: (f32, f32) = (500.0, INNER_HEIGHT);
-const MAX_INNER_SIZE: (f32, f32) = (650.0, INNER_HEIGHT);
+const MAX_INNER_SIZE: (f32, f32) = (700.0, INNER_HEIGHT);
 const MIN_HELP_INNER_SIZE: (f32, f32) = (400.0, 180.0);
 const WINDOW_PADDING: f32 = 20.0;
 const SECTION_SPACING: f32 = 20.0;
